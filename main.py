@@ -27,7 +27,6 @@ def configure_routes(app):
     # Index (Login) page
     @app.route('/', methods=['GET', 'POST'])
     def index():
-        error = 0
         message = ''
 
         if request.method == 'POST':
@@ -50,28 +49,27 @@ def configure_routes(app):
 
     @app.route('/create_password', methods=['GET', 'POST'])
     def create_password():
-        if session.get('Username') is not None:
-            message = ''
+        if session.get('Username') is None:
+            return redirect(url_for('index'))
+        message = ''
 
-            if request.method == 'POST':
-                password1 = request.form.get('password1')
-                password2 = request.form.get('password2')
+        if request.method == 'POST':
+            password1 = request.form.get('password1')
+            password2 = request.form.get('password2')
 
-                error = create_password_function(session.get('EmployeeID'), password1, password2)
+            error = create_password_function(session.get('EmployeeID'), password1, password2)
 
-                if error == 0:
-                    return redirect(url_for('home'))
-                elif error == 1:
-                    message = ('Your password must include <br>'
-                               '1 uppercase letter, 1 lowercase letter,<br>'
-                               '1 number, and 1 special character!<br>'
-                               'It must also be at least 8 characters!')
-                elif error == 2:
-                    message = 'The passwords did not match!'
+            if error == 0:
+                return redirect(url_for('home'))
+            elif error == 1:
+                message = ('Your password must include <br>'
+                           '1 uppercase letter, 1 lowercase letter,<br>'
+                           '1 number, and 1 special character!<br>'
+                           'It must also be at least 8 characters!')
+            elif error == 2:
+                message = 'The passwords did not match!'
 
-            return render_template('create_password.html', message=message)
-        else:
-          return redirect(url_for('index'))
+        return render_template('create_password.html', message=message)
 
     @app.route('/logout')
     def logout():
@@ -80,182 +78,173 @@ def configure_routes(app):
 
     @app.route('/home')
     def home():
-        if session.get('Username') is not None:
-            return render_template('home.html', username=session.get('Username'), role=session.get('Position'))
-        else:
+        if session.get('Username') is None:
             return redirect(url_for('index'))
+        return render_template('home.html', username=session.get('Username'), role=session.get('Position'))
 
     @app.route('/checkout')
     def checkout():
-        # if ((session.get('Position') == 'Cashier') or (session.get('Position') == 'Cashier/Warehouseman') or (session.get('Position') == 'Manager')):
+        # if ((session.get('Position') != 'Cashier') or (session.get('Position') != 'Cashier/Warehouseman') or (session.get('Position') != 'Manager')):
+        #   return redirect(url_for('home'))
         title = 'Checkout'
         code = '<h1>Checkout</h1>'
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
-        # else:
-        #   return redirect(url_for('home'))
 
     @app.route('/inventory_management')
     def inventory_management():
-        # if ((session.get('Position') == 'Warehouseman') or (session.get('Position') == 'Cashier/Warehouseman') or (session.get('Position') == 'Manager')):
+        # if ((session.get('Position') != 'Warehouseman') or (session.get('Position') != 'Cashier/Warehouseman') or (session.get('Position') != 'Manager')):
+        #   return redirect(url_for('home'))
         title = 'Inventory Management'
         code = '<h1>Inventory Management</h1>'
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
-        # else:
-        #   return redirect(url_for('home'))
 
     @app.route('/product_management')
     def product_management():
-        # if session.get('Position') == 'Manager':
+        # if session.get('Position') != 'Manager':
+        #   return redirect(url_for('home'))
         title = 'Product Management'
         code = '<h1>Product Management</h1>'
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
-        # else:
-        #   return redirect(url_for('home'))
+
 
     @app.route('/user_management')
     def user_management():
-        # if session.get('Position') == 'Manager':
+        # if session.get('Position') != 'Manager':
+        #   return redirect(url_for('home'))
         title = 'User Management'
         code = '<h1>User Management</h1>'
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
-        # else:
-        #   return redirect(url_for('home'))
 
     @app.route('/report_generation')
     def report_generation():
-        # if session.get('Position') == 'Manager':
+        # if session.get('Position') != 'Manager':
+        #   return redirect(url_for('home'))
         title = 'Report Generation'
         code = '<h1>Report Generation</h1>'
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
-        # else:
-        #   return redirect(url_for('home'))
 
     @app.route('/add_user', methods=['GET', 'POST'])
     def add_user():
-        if session.get('Position') == 'Manager':
-            title = 'Add User'
-            data = {}
-            message = ''
-            data["Message"] = message
-            code = get_form('add_user', data)
-
-            if request.method == 'POST':
-                user_data = []
-
-                user_data.append(request.form.get('employee_id'))
-                user_data.append(request.form.get('username'))
-                user_data.append(request.form.get('first_name'))
-                user_data.append(request.form.get('last_name'))
-                user_data.append(request.form.get('dob'))
-                user_data.append(request.form.get('phone'))
-                user_data.append(request.form.get('role'))
-
-                password = user_management_system.add_user(user_data)
-
-                if password == 1:
-                    message = f'<h6>A user with the employee ID {user_data[2]} already exists!</h6>'
-                    data = {"Message": message}
-                    code = get_form('add_user', data)
-                elif password == 2:
-                    message = f'<h6>A user with the username {user_data[1]} already exists!</h6>'
-                    data = {"Message": message}
-                    code = get_form('add_user', data)
-                else:
-                    code = (f'<h1>One-Time Password</h1><br>'
-                            f'<h3>The account has been created. Provide the user with the one-time password.</h3><br>'
-                            f'<p>{password}</p><br><br>'
-                            f'<a href="{url_for('user_management')}">'
-                            f'<input class="selection_button" type="button" value="OK">'
-                            f'</a>')
-            return render_template('form_template.html',
-                                   username=session.get('Username'), title=title, code=code)
-        else:
+        if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
+        title = 'Add User'
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_form('add_user', data)
+
+        if request.method == 'POST':
+            user_data = []
+
+            user_data.append(request.form.get('employee_id'))
+            user_data.append(request.form.get('username'))
+            user_data.append(request.form.get('first_name'))
+            user_data.append(request.form.get('last_name'))
+            user_data.append(request.form.get('dob'))
+            user_data.append(request.form.get('phone'))
+            user_data.append(request.form.get('role'))
+
+            password = user_management_system.add_user(user_data)
+
+            if password == 1:
+                message = f'<h6>A user with the employee ID {user_data[2]} already exists!</h6>'
+                data = {"Message": message}
+                code = get_form('add_user', data)
+            elif password == 2:
+                message = f'<h6>A user with the username {user_data[1]} already exists!</h6>'
+                data = {"Message": message}
+                code = get_form('add_user', data)
+            else:
+                code = (f'<h1>One-Time Password</h1><br>'
+                        f'<h3>The account has been created. Provide the user with the one-time password.</h3><br>'
+                        f'<p>{password}</p><br><br>'
+                        f'<a href="{url_for('user_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
 
     @app.route('/modify_user/<int:employee_id>', methods=['GET', 'POST'])
     def modify_user(employee_id):
-        if session.get('Position') == 'Manager':
-            title = 'Modify User'
-            message = ''
-            data = user_management_system.get_user_data(employee_id)
-            data["Message"] = message
-            code = get_form('modify_user', data)
-            message = ''
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Modify User'
+        message = ''
+        data = user_management_system.get_user_data(employee_id)
+        data["Message"] = message
+        code = get_form('modify_user', data)
+        message = ''
 
-            if request.method == 'POST':
-                user_data = []
+        if request.method == 'POST':
+            user_data = []
 
-                user_data.append(employee_id)
-                user_data.append(request.form.get('username'))
-                user_data.append(request.form.get('first_name'))
-                user_data.append(request.form.get('last_name'))
-                user_data.append(request.form.get('phone'))
-                user_data.append(request.form.get('role'))
+            user_data.append(employee_id)
+            user_data.append(request.form.get('username'))
+            user_data.append(request.form.get('first_name'))
+            user_data.append(request.form.get('last_name'))
+            user_data.append(request.form.get('phone'))
+            user_data.append(request.form.get('role'))
 
-                user_management_system.modify_user(user_data)
+            user_management_system.modify_user(user_data)
 
-                code = (f'<h1>Modify User {user_data[0]} ({user_data[1]})</h1>'
-                        f'<h3>This user account has been successfully updated!</h3><br>'
+            code = (f'<h1>Modify User {user_data[0]} ({user_data[1]})</h1>'
+                    f'<h3>This user account has been successfully updated!</h3><br>'
+                    f'<a href="{url_for('user_management')}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
+
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
+
+    @app.route('/delete_user/<int:employee_id>', methods=['GET', 'POST'])
+    def delete_user(employee_id):
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Modify User'
+        message = ''
+        data = user_management_system.get_user_data(employee_id)
+        data["Message"] = message
+        code = get_form('delete_user', data)
+
+        if request.method == 'POST':
+
+            error = user_management_system.delete_user(data.get("EmployeeID"))
+
+            if error == 0:
+                code = (f'<h1>Delete User {data.get("EmployeeID")} ({data.get("Username")})</h1>'
+                        f'<h3>This user account has been successfully deleted!</h3><br>'
                         f'<a href="{url_for('user_management')}">'
                         f'<input class="selection_button" type="button" value="OK">'
                         f'</a>')
 
-            return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
-        else:
-            return redirect(url_for('home'))
-
-    @app.route('/delete_user/<int:employee_id>', methods=['GET', 'POST'])
-    def delete_user(employee_id):
-        if session.get('Position') == 'Manager':
-            title = 'Modify User'
-            message = ''
-            data = user_management_system.get_user_data(employee_id)
-            data["Message"] = message
-            code = get_form('delete_user', data)
-
-            if request.method == 'POST':
-
-                error = user_management_system.delete_user(data.get("EmployeeID"))
-
-                if error == 0:
-                    code = (f'<h1>Delete User {data.get("EmployeeID")} ({data.get("Username")})</h1>'
-                            f'<h3>This user account has been successfully deleted!</h3><br>'
-                            f'<a href="{url_for('user_management')}">'
-                            f'<input class="selection_button" type="button" value="OK">'
-                            f'</a>')
-
-            return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
-        else:
-            return redirect(url_for('home'))
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
 
     @app.route('/reset_user/<int:employee_id>', methods=['GET', 'POST'])
     def reset_user(employee_id):
-        if session.get('Position') == 'Manager':
-            title = 'Reset User Password'
-            message = ''
-            data = user_management_system.get_user_data(employee_id)
-            data["Message"] = message
-            code = get_form('reset_user', data)
-
-            if request.method == 'POST':
-
-                password = user_management_system.reset_user_password(data.get("EmployeeID"))
-
-                code = code = (f'<h1>One-Time Password</h1><br>'
-                               f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
-                               f'<p>{password}</p><br><br>'
-                               f'<input class="selection_button" type="button" value="OK">'
-                               f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
-                               f'</a>')
-
-            return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
-        else:
+        if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
+        title = 'Reset User Password'
+        message = ''
+        data = user_management_system.get_user_data(employee_id)
+        data["Message"] = message
+        code = get_form('reset_user', data)
+
+        if request.method == 'POST':
+
+            password = user_management_system.reset_user_password(data.get("EmployeeID"))
+
+            code = code = (f'<h1>One-Time Password</h1><br>'
+                           f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
+                           f'<p>{password}</p><br><br>'
+                           f'<input class="selection_button" type="button" value="OK">'
+                           f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
+                           f'</a>')
+
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
 
 
 # Set up the Flask app
