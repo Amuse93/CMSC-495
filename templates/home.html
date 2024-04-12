@@ -1,11 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>ALPHA Store</title>
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='/styles/style.css') }}">
 </head>
+
 <body>
-    <h1>Home</h1>
+    <header>
+        <!-- ALPHA Store on the left -->
+        <div class="left">ALPHA Store</div>
+        
+        <!-- Username and Logout button on the right -->
+        <div class="right">
+            <span class="username" id="username">{{ username }}</span>
+            <a href="{{ url_for('logout') }}"><button class="logout-button">Logout</button></a>
+        </div>
+    </header>
+    
+    <!-- 2x3 grid of buttons -->
+    <br>
+    <br>
+    <br>
+    <div class="input_section">
+
+        <div class="headingsContainer">
+            <h1>Systems Menu</h1>
+        </div>
+
+    <br>
+
+    <div class="grid-container">
+        <!-- Create buttons from Button 1 to Button 6 -->
+        {% if role == 'Cashier' or role == 'Cashier/Warehouseman' or role == 'Manager'%}
+            <a href="{{ url_for('checkout') }}"><button>Checkout</button></a>
+        {% endif %}
+
+        {% if role == 'Warehouseman' or role == 'Cashier/Warehouseman' or role == 'Manager'%}
+            <a href="{{ url_for('inventory_management') }}"><button>Inventory<br>Management</button></a>
+        {% endif %}
+
+        {% if role == 'Manager'%}
+            <a href="{{ url_for('product_management') }}"><button>Product<br>Management</button></a>
+        {% endif %}
+
+        {% if role == 'Manager'%}
+            <a href="{{ url_for('user_management') }}"><button>User<br>Management</button></a>
+        {% endif %}
+
+        {% if role == 'Manager'%}
+            <a href="{{ url_for('report_generation') }}"><button>Report<br>Generation</button></a>
+        {% endif %}
+        
+    </div>
+    </div>
+
 </body>
+
 </html>

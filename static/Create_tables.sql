@@ -16,16 +16,24 @@ CREATE TABLE Users (
     Phone_Number varchar(15),
     Position char(30),
     First_Time int CHECK (First_Time IN (0, 1)),
-    NumberOf_Tries int,
+    Number_Of_Tries int,
     PRIMARY KEY (EmployeeID)
     );
 
+-- Removed Product data as it has a many-to-many relationship.
 CREATE TABLE Shelf (
     ShelfID varchar NOT NULL,
-    ProductID varchar NOT NULL,
+    PRIMARY KEY (ShelfID)
+    );
+
+-- Shelf_Product: Can store many products per shelf and multiple shelves can have the same product.
+CREATE TABLE Shelf_Product(
+    ShelfID varchar,
+    ProductID varchar,
     Quantity int,
-    PRIMARY KEY (ShelfID, ProductID),
-    FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
+    FOREIGN KEY (ShelfID) REFERENCES Shelf(ShelfID),
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID),
+    PRIMARY KEY (ShelfID, ProductID)
     );
     
 CREATE TABLE Sales (
@@ -46,6 +54,7 @@ CREATE TABLE Sales_Products (
     FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
     );
     
+-- Added the EmployeeID as an FK.
 CREATE TABLE Waste_Reports (
     Report_Number varchar NOT NULL,
     ProductID varchar NOT NULL,
@@ -55,7 +64,8 @@ CREATE TABLE Waste_Reports (
     Description varchar(255),
     EmployeeID int,
     PRIMARY KEY (Report_Number),
-    FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID),
+    FOREIGN KEY (EmployeeID) REFERENCES Users(EmployeeID)
     );
 
 /*Default Admin account. Password is 'password'
@@ -70,7 +80,7 @@ VALUES (
     'admin',
     '2024-03-28',
     '555-555-5555',
-    'Admin',
+    'Manager',
     0,
     0
     );
