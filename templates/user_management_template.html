@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <!-- Uncomment the following line to use the stylesheet -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/styles/style.css') }}">
+    <!-- <link rel="stylesheet" type="text/css" href="C:/Users/andre/OneDrive/Desktop/Education/1. Current/2. CMSC 495 - Capstone in Computer Science/Alpha Store Management System/static/styles/style.css"> -->
+
+    <script src="{{ url_for('static', filename='js/user_management_script.js') }}"></script>
+
+
+
+
+</head>
+
+<body>
+
+    <header>
+        <!-- ALPHA Store on the left -->
+        <div class="left">
+            ALPHA Store - {{ title }}
+        </div>
+        
+        <!-- Username and Logout button on the right -->
+        <div class="right">
+            <span class="username" id="username">{{ username }}</span>
+            <a href="{{ url_for('home') }}">
+                <button class="logout-button">Home</button>
+            </a>
+        </div>
+    </header>
+
+    <br>
+
+    <main>
+        <div class="left-section">
+            <button type="button">Add</button>
+            <a id="modify-btn" href="#" style="display: none;">
+                <button type="button">Modify</button>
+            </a>
+        </div>
+
+        <!-- Right section -->
+        <div class="right-section">
+            <div class="search-menu">
+                <div class="search-flex">
+                    <div class="search-section">
+                        <input type="text" id="search" name="search" placeholder="Search">
+                        <input type="submit" value="Search">
+                    </div>
+                    <div class="search-section">
+                        <label for="searchBy">Search By:</label>
+                        <select id="searchBy" name="searchBy">
+                            <option value="EmployeeID" selected>EmployeeID</option>
+                            <option value="Username">Username</option>
+                            <option value="Last Name">Last Name</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="table-section">
+    <table class="employee-table">
+        <thead>
+            <tr>
+                <th>EmployeeID</th>
+                <th>Username</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Date of Birth</th>
+                <th>Phone Number</th>
+                <th>Roles</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Add rows of data here -->
+            {% for user in users %}
+                <tr data-user-id="{{ user.EmployeeID }}" onclick="selectRow(this)">
+                    <td>{{ user.EmployeeID }}</td>
+                    <td>{{ user.Username }}</td>
+                    <td>{{ user.First_Name }}</td>
+                    <td>{{ user.Last_Name }}</td>
+                    <td>{{ user.DOB }}</td>
+                    <td>{{ user.Phone_Number }}</td>
+                    <td>{{ user.Position }}</td>
+                </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+            </div>
+        </div>
+    </main>
+
+</body>
+
+</html>

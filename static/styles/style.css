@@ -1,24 +1,16 @@
+/* Body and General Styles */
 body {
     font-family: Arial;
     background: #FDE4EC;
     color: rgb(32, 24, 24);
 }
 
-header {
-    background-color: #FAB7C2;
-    padding: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 12px;
-    border: 3px solid rgba(16, 9, 9, 0.125);
-}
-
-.mainContainer {
+main {
     padding: 16px;
     text-align: left;
 }
 
+/* Typography */
 h1 {
     text-align: center;
 }
@@ -28,7 +20,7 @@ h3 {
 }
 
 h6 {
-    color: red; 
+    color: red;
     font-family: Arial;
 }
 
@@ -36,6 +28,7 @@ p {
     text-align: center;
 }
 
+/* Buttons */
 button {
     background-color: #5c63e0;
     color: white;
@@ -46,15 +39,22 @@ button {
     font-size: 18px;
 }
 
-input {
-    width: 100%;
-    margin: 10px 0;
-    border-radius: 5px;
-    padding: 15px 18px;
-    box-sizing: border-box;
-    float: none;
+button:hover {
+    opacity: 0.6;
+    cursor: pointer;
 }
 
+.selection_button {
+    background-color: #5c63e0;
+    color: white;
+    padding: 14px 20px;
+    border-radius: 5px;
+    margin: 7px 7px;
+    font-size: 18px;
+}
+
+/* Forms and Inputs */
+input,
 select {
     width: 100%;
     margin: 10px 0;
@@ -65,38 +65,46 @@ select {
 }
 
 label {
-    width:auto;
-    clear:none;
-    text-align:left;
-    padding-right:0px;
+    width: auto;
+    clear: none;
+    text-align: left;
+    padding-right: 0px;
 }
 
-/* Styling the left side of the header */
+/* Header Styles */
+header {
+    background-color: #FAB7C2;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 12px;
+    border: 3px solid rgba(16, 9, 9, 0.125);
+}
+
 .left {
     font-size: 1.5rem;
     font-family: Calibri;
     font-weight: bold;
 }
 
-/* Styling the right side of the header */
 .right {
     display: flex;
     align-items: center;
-padding-right: 10px;
+    padding-right: 10px;
 }
 
 .username {
     font-size: 18px;
 }
 
-/* Styling the Logout button */
 .logout-button {
     margin-left: 10px;
     padding: 5px 10px;
     cursor: pointer;
 }
 
-/* Styling the grid container */
+/* Grid and Flexbox Layout */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -107,40 +115,15 @@ padding-right: 10px;
     width: 200px;
 }
 
-/* Styling the buttons */
 .grid-container button {
     padding: 10px;
     font-size: 1rem;
     border: none;
     cursor: pointer;
-    //background-color: #007BFF;
-    //color: white;
     border-radius: 5px;
     width: 200px; /* Make the buttons narrower */
     height: 75px; /* Make the buttons taller */
     margin: 0 auto; /* Center the buttons */
-}
-
-.input_section {
-    width: 35rem;
-    margin: auto;
-    color: rgb(27, 23, 28);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    background-color: #FAB7C2;
-    border-radius: 12px;
-    border: 3px solid rgba(16, 9, 9, 0.125);
-}
-
-
-
-.headingsContainer {
-    text-align: center;
-}
-
-.mainContainer {
-    padding: 16px;
-    text-align: left;
 }
 
 .subcontainer {
@@ -155,27 +138,161 @@ padding-right: 10px;
     margin-bottom: 12px;
 }
 
-.selection_button {
+/* Special Sections */
+.input_section{
+    width: 35rem;
+    padding: 25px;
+    margin: auto;
+    color: rgb(27, 23, 28);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background-color: #FAB7C2;
+    border-radius: 12px;
+    border: 3px solid rgba(16, 9, 9, 0.125);
+}
+
+/* /////////////////////////////////////////////////////// */
+/* User Management Style */
+main {
+    width: 100%;
+    display: flex; /* Use flexbox layout for the main element */
+    justify-content: start; /* Add spacing between the left and right sections */
+    padding: 0; /* Add padding for spacing */
+}
+
+/* Add styles for the left section */
+.left-section {
+    width: 100px;
+    padding: 15px;
+    color: rgb(27, 23, 28);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background-color: #FAB7C2;
+    border-radius: 12px;
+    border: 3px solid rgba(16, 9, 9, 0.125);
+}
+
+/* Add styles for the right section */
+.right-section {
+    float: right;
+    padding: 0;
+    margin-left: 10px;
+    margin-right: 25px;
+    width: 100%;
+}
+
+.search-menu {
+    gap: 10px;
+    width: 100%; /* Make the search menu take the full width */
+    padding: 10px;
+    color: rgb(27, 23, 28);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background-color: #FAB7C2;
+    border-radius: 12px;
+    border: 3px solid rgba(16, 9, 9, 0.125);
+}
+
+.search-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.search-section {
+    font-size: 0.8rem; /* Decrease the font size for a smaller appearance */
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Keep the gap consistent for better spacing */
+}
+
+/* Style for the text input */
+.search-section input[type="text"] {
+    width: 280px;
+    padding: 8px; /* Decrease padding for a smaller appearance */
+    height: 1.8rem; /* Adjust the height to match the decreased padding */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+/* Style for the submit button */
+.search-section input[type="submit"] {
+    padding: 0px 12px; /* Decrease padding for a smaller appearance */
+    height: 1.8rem; /* Adjust the height to match the decreased padding */
     background-color: #5c63e0;
     color: white;
-    padding: 14px 20px;
     border-radius: 5px;
-    margin: 7px 7px;
-    font-size: 18px;
-}
-
-button:hover {
-    opacity: 0.6;
     cursor: pointer;
+    width: 100px;
+}
+
+/* Style for the select input */
+.search-section select {
+    font-size: 0.8rem;
+    width: 100px;
+    padding: 0; /* Decrease padding for a smaller appearance */
+    height: 1.8rem; /* Adjust the height to match the decreased padding */
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+.table-section {
+    margin-top: 10px;
+    gap: 10px;
+    width: 100%; /* Make the search menu take the full width */
+    padding: 10px;
+    color: rgb(27, 23, 28);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background-color: #FAB7C2;
+    border-radius: 12px;
+    border: 3px solid rgba(16, 9, 9, 0.125);
 }
 
 
+/* Employee Table Styles */
+.employee-table {
+    width: 100%;
+    border-collapse: collapse; /* Collapse borders into a single border */
+}
 
+.employee-table th,
+.employee-table td {
+    border: 1px solid #ccc; /* Light gray border */
+    padding: 8px;
+    text-align: left; /* Align text to the left */
+}
+
+.employee-table th {
+    background-color: #f0f0f0; /* Light gray background for headers */
+    font-weight: bold;
+}
+
+/* Additional styling for table rows */
+.employee-table tr:nth-child(odd) {
+    background-color: #f7c8d8; /* Light background color for even rows */
+}
+
+.employee-table tr:nth-child(even) {
+    background-color: #FDE4EC; /* Light background color for even rows */
+}
+
+/* CSS for selected rows */
+.employee-table tr.selected {
+    background-color: #ffcccc; /* Background color for selected rows */
+    color: white; /* Text color for selected rows */
+}
+
+/* End User Management Style */
+/* ////////////////////////////////////////////////////////////////////////////// */
+
+/* Responsive Design */
 @media screen and (max-width: 600px) {
     form {
         width: 25rem;
     }
-
 }
 
 @media screen and (max-width: 400px) {

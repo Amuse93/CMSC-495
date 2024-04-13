@@ -4,12 +4,11 @@ import sqlite3
 import os
 import secrets
 import getpass
-import hashlib
 import re
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session
 from passlib.hash import sha256_crypt
-#from product_cache import ProductCache
+# from product_cache import ProductCache
 from user_management import UserManagement
 
 # Global Password for emails
@@ -84,7 +83,8 @@ def configure_routes(app):
 
     @app.route('/checkout')
     def checkout():
-        # if ((session.get('Position') != 'Cashier') or (session.get('Position') != 'Cashier/Warehouseman') or (session.get('Position') != 'Manager')):
+        # if ((session.get('Position') != 'Cashier') or (session.get('Position') != 'Cashier/Warehouseman')
+        # or (session.get('Position') != 'Manager')):
         #   return redirect(url_for('home'))
         title = 'Checkout'
         code = '<h1>Checkout</h1>'
@@ -93,7 +93,8 @@ def configure_routes(app):
 
     @app.route('/inventory_management')
     def inventory_management():
-        # if ((session.get('Position') != 'Warehouseman') or (session.get('Position') != 'Cashier/Warehouseman') or (session.get('Position') != 'Manager')):
+        # if ((session.get('Position') != 'Warehouseman') or (session.get('Position') != 'Cashier/Warehouseman')
+        # or (session.get('Position') != 'Manager')):
         #   return redirect(url_for('home'))
         title = 'Inventory Management'
         code = '<h1>Inventory Management</h1>'
@@ -109,15 +110,16 @@ def configure_routes(app):
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
 
-
     @app.route('/user_management')
     def user_management():
         # if session.get('Position') != 'Manager':
         #   return redirect(url_for('home'))
         title = 'User Management'
         code = '<h1>User Management</h1>'
-        return render_template('form_template.html',
-                               username=session.get('Username'), title=title, code=code)
+        users = user_management_system.list_users()
+
+        return render_template('user_management_template.html',
+                               username=session.get('Username'), title=title, users=users)
 
     @app.route('/report_generation')
     def report_generation():
@@ -136,29 +138,23 @@ def configure_routes(app):
         data = {}
         message = ''
         data["Message"] = message
-        code = get_form('add_user', data)
+        code = get_user_management_form('add_user', data)
 
         if request.method == 'POST':
-            user_data = []
-
-            user_data.append(request.form.get('employee_id'))
-            user_data.append(request.form.get('username'))
-            user_data.append(request.form.get('first_name'))
-            user_data.append(request.form.get('last_name'))
-            user_data.append(request.form.get('dob'))
-            user_data.append(request.form.get('phone'))
-            user_data.append(request.form.get('role'))
+            user_data = [request.form.get('employee_id'), request.form.get('username'), request.form.get('first_name'),
+                         request.form.get('last_name'), request.form.get('dob'), request.form.get('phone'),
+                         request.form.get('role')]
 
             password = user_management_system.add_user(user_data)
 
             if password == 1:
                 message = f'<h6>A user with the employee ID {user_data[2]} already exists!</h6>'
                 data = {"Message": message}
-                code = get_form('add_user', data)
+                code = get_user_management_form('add_user', data)
             elif password == 2:
                 message = f'<h6>A user with the username {user_data[1]} already exists!</h6>'
                 data = {"Message": message}
-                code = get_form('add_user', data)
+                code = get_user_management_form('add_user', data)
             else:
                 code = (f'<h1>One-Time Password</h1><br>'
                         f'<h3>The account has been created. Provide the user with the one-time password.</h3><br>'
@@ -177,18 +173,11 @@ def configure_routes(app):
         message = ''
         data = user_management_system.get_user_data(employee_id)
         data["Message"] = message
-        code = get_form('modify_user', data)
-        message = ''
+        code = get_user_management_form('modify_user', data)
 
         if request.method == 'POST':
-            user_data = []
-
-            user_data.append(employee_id)
-            user_data.append(request.form.get('username'))
-            user_data.append(request.form.get('first_name'))
-            user_data.append(request.form.get('last_name'))
-            user_data.append(request.form.get('phone'))
-            user_data.append(request.form.get('role'))
+            user_data = [employee_id, request.form.get('username'), request.form.get('first_name'),
+                         request.form.get('last_name'), request.form.get('phone'), request.form.get('role')]
 
             user_management_system.modify_user(user_data)
 
@@ -208,7 +197,7 @@ def configure_routes(app):
         message = ''
         data = user_management_system.get_user_data(employee_id)
         data["Message"] = message
-        code = get_form('delete_user', data)
+        code = get_user_management_form('delete_user', data)
 
         if request.method == 'POST':
 
@@ -231,35 +220,36 @@ def configure_routes(app):
         message = ''
         data = user_management_system.get_user_data(employee_id)
         data["Message"] = message
-        code = get_form('reset_user', data)
+        code = get_user_management_form('reset_user', data)
 
         if request.method == 'POST':
 
             password = user_management_system.reset_user_password(data.get("EmployeeID"))
 
-            code = code = (f'<h1>One-Time Password</h1><br>'
-                           f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
-                           f'<p>{password}</p><br><br>'
-                           f'<input class="selection_button" type="button" value="OK">'
-                           f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
-                           f'</a>')
+            code = (f'<h1>One-Time Password</h1><br>'
+                    f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
+                    f'<p>{password}</p><br><br>'
+                    f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
+                    f'<a href="{url_for('modify_user', employee_id=data.get("EmployeeID"))}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
 
         return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
 
 
 # Set up the Flask app
 def create_app():
-    app = Flask(__name__)
-    app.secret_key = secrets.token_hex(24)
-    app.static_folder = 'static'
+    flask_app = Flask(__name__)
+    flask_app.secret_key = secrets.token_hex(24)
+    flask_app.static_folder = 'static'
 
     # Configure database creation
     create_database()
 
     # Other configurations
-    configure_routes(app)
+    configure_routes(flask_app)
 
-    return app
+    return flask_app
 
 
 # Check if there exists a database. If not, create one.
@@ -351,12 +341,12 @@ def login(username, password):
 def create_password_function(employee_id, password1, password2):
     # Check if password1 meets complexity requirements
     flag = 0
-    if (len(password1) < 8):
+    if len(password1) < 8:
         flag = 1
     elif not re.search("[a-z]", password1):
         flag = 1
     elif not re.search("[A-Z]", password1):
-         flag = 1
+        flag = 1
     elif not re.search("[0-9]", password1):
         flag = 1
     elif not re.search("[!@#$%^&*()_+=:;<>?]", password1):
@@ -396,8 +386,8 @@ def logoff():
 
 
 # Provides HTML for various forms
-def get_form(type, data):
-    if type == 'add_user':
+def get_user_management_form(form_type, data):
+    if form_type == 'add_user':
         add_user = (f'<h1>Add User</h1>'
                     f'{data.get("Message")}'
                     f'<form action="{url_for('add_user')}" id="add_user" method="post">'
@@ -446,25 +436,28 @@ def get_form(type, data):
                     )
         return add_user
 
-
-
-    if type == 'modify_user':
+    if form_type == 'modify_user':
         modify_user = (f'<h1>Modify User {data.get("EmployeeID")} ({data.get("Username")})</h1>'
-                       f'<form action="{url_for('modify_user', employee_id=data.get("EmployeeID"))}" id="modify_user" method="post">'
+                       f'<form action="{url_for('modify_user', employee_id=data.get("EmployeeID"))}" '
+                       f'id="modify_user" method="post">'
                        f'<label for="username">Username: </label>'
-                       f'<input type="text" id="username" name="username" size="25" autocomplete="off" value="{data.get("Username")}" required>'
+                       f'<input type="text" id="username" name="username" size="25" autocomplete="off" '
+                       f'value="{data.get("Username")}" required>'
                        f'<br>'
                        f'<br>'
                        f'<label for="first_name">First Name: </label>'
-                       f'<input type="text" id="first_name" name="first_name" size="25" autocomplete="off" value="{data.get("First_Name")}" required>'
+                       f'<input type="text" id="first_name" name="first_name" size="25" autocomplete="off" '
+                       f'value="{data.get("First_Name")}" required>'
                        f'<br>'
                        f'<br>'
                        f'<label for="last_name">Last Name: </label>'
-                       f'<input type="text" id="last_name" name="last_name" size="25" autocomplete="off" value="{data.get("Last_Name")}" required>'
+                       f'<input type="text" id="last_name" name="last_name" size="25" autocomplete="off" '
+                       f'value="{data.get("Last_Name")}" required>'
                        f'<br>'
                        f'<br>'
                        f'<label for="phone">Phone Number: </label>'
-                       f'<input type="tel" id="phone" name="phone" size="25" autocomplete="off" value="{data.get("Phone_Number")}" required>'
+                       f'<input type="tel" id="phone" name="phone" size="25" autocomplete="off" '
+                       f'value="{data.get("Phone_Number")}" required>'
                        f'<br>'
                        f'<br>'
                        f'<label for="role">Role(s): </label>'
@@ -504,10 +497,10 @@ def get_form(type, data):
                        )
         return modify_user
 
-
-    if type == 'delete_user':
+    if form_type == 'delete_user':
         delete_user = (f'<h1>Delete User {data.get("EmployeeID")} ({data.get("Username")})</h1>'
-                       f'<form action="{url_for('delete_user', employee_id=data.get("EmployeeID"))}" id="delete_user" method="post">'
+                       f'<form action="{url_for('delete_user', employee_id=data.get("EmployeeID"))}" '
+                       f'id="delete_user" method="post">'
                        f'<h3>Are you sure you want to delete this account?</h3>'
                        f'<br>'
                        f'<div>'
@@ -521,10 +514,10 @@ def get_form(type, data):
 
         return delete_user
 
-
-    if type == 'reset_user':
+    if form_type == 'reset_user':
         reset_user = (f'<h1>Reset User {data.get("EmployeeID")} ({data.get("Username")})</h1>'
-                      f'<form action="{url_for('reset_user', employee_id=data.get("EmployeeID"))}" id="reset_user" method="post">'
+                      f'<form action="{url_for('reset_user', employee_id=data.get("EmployeeID"))}" '
+                      f'id="reset_user" method="post">'
                       f'<h3>Are you sure you want to reset the password for this account?</h3>'
                       f'<br>'
                       f'<div>'
@@ -543,12 +536,12 @@ def get_form(type, data):
 if __name__ == '__main__':
 
     # Prompt System Administrator for the organization's email server, email, and password
-    #global server
-    #global organizational_email
-    #global email_password
-    #server = input("Email server: ")
-    #organizational_email = input("Email: ")
-    #email_password = getpass.getpass("Password: ")
+    # global server
+    # global organizational_email
+    # global email_password
+    # server = input("Email server: ")
+    # organizational_email = input("Email: ")
+    # email_password = getpass.getpass("Password: ")
 
     app = create_app()
     app.run()
