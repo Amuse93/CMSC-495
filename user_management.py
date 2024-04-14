@@ -31,6 +31,21 @@ class UserManagement:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
+        print(user_information[6])
+
+        if user_information[0].isnumeric() is False:
+            return 3
+        if len(user_information[1]) > 60:
+            return 4
+        if len(user_information[2]) > 60:
+            return 5
+        if len(user_information[3]) > 60:
+            return 6
+        if (user_information[5].isnumeric() is False) or (len(user_information[5]) != 10):
+            return 7
+        if user_information[6] is None:
+            return 8
+
         # Check if the username exists
         cursor.execute("SELECT COUNT(*) FROM Users WHERE EmployeeID = ?", (user_information[0],))
         user_exists = cursor.fetchone()[0]
@@ -103,6 +118,18 @@ class UserManagement:
 
     def modify_user(self, user_information):
         """ Updates a selected User's information in the database. """
+
+        if len(user_information[1]) > 60:
+            return 4
+        if len(user_information[2]) > 60:
+            return 5
+        if len(user_information[3]) > 60:
+            return 6
+        if (user_information[4].isnumeric() is False) or (len(user_information[4]) != 10):
+            return 7
+        if user_information[5] == '-- Make Selection --':
+            return 8
+
         script = [(f"UPDATE Users SET Username = '{user_information[1]}', "
                    f"First_Name = '{user_information[2]}', "
                    f"Last_Name = '{user_information[3]}', "

@@ -3,9 +3,9 @@
 import sqlite3
 import os
 import secrets
-import getpass
+# import getpass
 import re
-from datetime import datetime
+# from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from passlib.hash import sha256_crypt
 # from product_cache import ProductCache
@@ -26,6 +26,9 @@ def configure_routes(app):
     # Index (Login) page
     @app.route('/', methods=['GET', 'POST'])
     def index():
+        if session.get("Username") is not None:
+            return redirect(url_for("home"))
+
         message = ''
 
         if request.method == 'POST':
@@ -110,25 +113,25 @@ def configure_routes(app):
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
 
-    @app.route('/user_management')
+    @app.route('/user_management', methods=['GET', 'POST'])
     def user_management():
-        # if session.get('Position') != 'Manager':
-        #   return redirect(url_for('home'))
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+
         title = 'User Management'
-        code = '<h1>User Management</h1>'
         users = user_management_system.list_users()
+        field = 'EmployeeID'
+
+        if request.method == 'POST':
+            field = request.form.get('search_by')
+            param = request.form.get('search')
+            if (param is not None) and (len(param) <= 60):
+                users = user_management_system.search_users(field, param)
+            else:
+                users = user_management_system.list_users()
 
         return render_template('user_management_template.html',
-                               username=session.get('Username'), title=title, users=users)
-
-    @app.route('/report_generation')
-    def report_generation():
-        # if session.get('Position') != 'Manager':
-        #   return redirect(url_for('home'))
-        title = 'Report Generation'
-        code = '<h1>Report Generation</h1>'
-        return render_template('form_template.html',
-                               username=session.get('Username'), title=title, code=code)
+                               username=session.get('Username'), title=title, users=users, field=field)
 
     @app.route('/add_user', methods=['GET', 'POST'])
     def add_user():
@@ -148,11 +151,35 @@ def configure_routes(app):
             password = user_management_system.add_user(user_data)
 
             if password == 1:
-                message = f'<h6>A user with the employee ID {user_data[2]} already exists!</h6>'
+                message = f'<h4>A user with the employee ID {user_data[2]} already exists!</h4>'
                 data = {"Message": message}
                 code = get_user_management_form('add_user', data)
             elif password == 2:
-                message = f'<h6>A user with the username {user_data[1]} already exists!</h6>'
+                message = f'<h4>A user with the username {user_data[1]} already exists!</h4>'
+                data = {"Message": message}
+                code = get_user_management_form('add_user', data)
+            elif password == 3:
+                message = f'<h4>The EmployeeID must be a number!</h6>'
+                data = {"Message": message}
+                code = get_user_management_form('add_user', data)
+            elif password == 4:
+                message = f'<h4>Username is too long!</h4>'
+                data = {"Message": message}
+                code = get_user_management_form('add_user', data)
+            elif password == 5:
+                message = f'<h4>First Name is too long!</h4>'
+                data = {"Message": message}
+                code = get_user_management_form('add_user', data)
+            elif password == 6:
+                message = f'<h4>Last Name is too long!</h4>'
+                data = {"Message": message}
+                code = get_user_management_form('add_user', data)
+            elif password == 7:
+                message = f'<h4>Invalid phone number!</h4>'
+                data = {"Message": message}
+                code = get_user_management_form('add_user', data)
+            elif password == 8:
+                message = f'<h4>Invalid role!</h4>'
                 data = {"Message": message}
                 code = get_user_management_form('add_user', data)
             else:
@@ -173,19 +200,37 @@ def configure_routes(app):
         message = ''
         data = user_management_system.get_user_data(employee_id)
         data["Message"] = message
+        data['EmployeeID'] = employee_id
         code = get_user_management_form('modify_user', data)
 
         if request.method == 'POST':
             user_data = [employee_id, request.form.get('username'), request.form.get('first_name'),
                          request.form.get('last_name'), request.form.get('phone'), request.form.get('role')]
 
-            user_management_system.modify_user(user_data)
+            error = user_management_system.modify_user(user_data)
 
-            code = (f'<h1>Modify User {user_data[0]} ({user_data[1]})</h1>'
-                    f'<h3>This user account has been successfully updated!</h3><br>'
-                    f'<a href="{url_for('user_management')}">'
-                    f'<input class="selection_button" type="button" value="OK">'
-                    f'</a>')
+            if error == 4:
+                message = f'<h4>Username is too long!</h4>'
+                data["Message"] = message
+                code = get_user_management_form('modify_user', data)
+            elif error == 5:
+                message = f'<h4>First Name is too long!</h4>'
+                data["Message"] = message
+                code = get_user_management_form('modify_user', data)
+            elif error == 6:
+                message = f'<h4>Last Name is too long!</h4>'
+                data["Message"] = message
+                code = get_user_management_form('modify_user', data)
+            elif error == 7:
+                message = f'<h4>Invalid phone number!</h4>'
+                data["Message"] = message
+                code = get_user_management_form('modify_user', data)
+            else:
+                code = (f'<h1>Modify User {user_data[0]} ({user_data[1]})</h1>'
+                        f'<h3>This user account has been successfully updated!</h3><br>'
+                        f'<a href="{url_for('user_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
 
         return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
 
@@ -223,7 +268,6 @@ def configure_routes(app):
         code = get_user_management_form('reset_user', data)
 
         if request.method == 'POST':
-
             password = user_management_system.reset_user_password(data.get("EmployeeID"))
 
             code = (f'<h1>One-Time Password</h1><br>'
@@ -235,6 +279,17 @@ def configure_routes(app):
                     f'</a>')
 
         return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
+
+    @app.route('/report_generation')
+    def report_generation():
+        # if session.get('Position') != 'Manager':
+        #   return redirect(url_for('home'))
+        title = 'Report Generation'
+        code = '<h1>Report Generation</h1>'
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+
 
 
 # Set up the Flask app
@@ -438,6 +493,7 @@ def get_user_management_form(form_type, data):
 
     if form_type == 'modify_user':
         modify_user = (f'<h1>Modify User {data.get("EmployeeID")} ({data.get("Username")})</h1>'
+                       f'{data.get("Message")}'
                        f'<form action="{url_for('modify_user', employee_id=data.get("EmployeeID"))}" '
                        f'id="modify_user" method="post">'
                        f'<label for="username">Username: </label>'
@@ -462,39 +518,55 @@ def get_user_management_form(form_type, data):
                        f'<br>'
                        f'<label for="role">Role(s): </label>'
                        f'<select id="role" name="role" required>'
-                       f'<option disabled selected>-- Make Selection --</option>'
-                       f'<option value = "Cashier">Cashier</option>'
-                       f'<option value = "Warehouseman">Warehouseman</option>'
-                       f'<option value = "Cashier/Warehouseman">Cashier/Warehouseman</option>'
-                       f'<option value = "Manager">Manager</option>'
-                       f'</select>'
-                       f'<br>'
-                       f'<br>'
-                       f'<br>'
-                       f'<div>'
-                       f'<input class="selection_button" type="submit" value="OK">'
-                       f'<a href="{url_for("user_management")}">'
-                       f'<input class="selection_button" type="button" value="Cancel">'
-                       f'</a>'
-                       f'</div>'
-                       f'</form>'
-                       f'<br>'
-                       f'<br>'
-                       f'<br>'
-                       f'<br>'
-                       f'<br>'
-                       f'<div>'
-                       f'<div class="headingsContainer">'
-                       f'<h1>Other Options</h1>'
-                       f'</div>'
-                       f'<a href="{url_for("reset_user", employee_id=data.get("EmployeeID"))}">'
-                       f'<input class="selection_button" type="button" value="Reset Password">'
-                       f'</a>'
-                       f'<a href="{url_for("delete_user", employee_id=data.get("EmployeeID"))}">'
-                       f'<input class="selection_button" type="button" value="Delete">'
-                       f'</a>'
-                       f'</div>'
-                       )
+                       f'<option disabled>-- Make Selection --</option>')
+        if data.get("Position") == "Cashier":
+            modify_user += (f'<option value = "Cashier" selected>Cashier</option>'
+                            f'<option value = "Warehouseman">Warehouseman</option>'
+                            f'<option value = "Cashier/Warehouseman">Cashier/Warehouseman</option>'
+                            f'<option value = "Manager">Manager</option>')
+        if data.get("Position") == "Warehouseman":
+            modify_user += (f'<option value = "Cashier">Cashier</option>'
+                            f'<option value = "Warehouseman" selected>Warehouseman</option>'
+                            f'<option value = "Cashier/Warehouseman">Cashier/Warehouseman</option>'
+                            f'<option value = "Manager">Manager</option>')
+        if data.get("Position") == "Cashier/Warehouseman":
+            modify_user += (f'<option value = "Cashier">Cashier</option>'
+                            f'<option value = "Warehouseman">Warehouseman</option>'
+                            f'<option value = "Cashier/Warehouseman" selected>Cashier/Warehouseman</option>'
+                            f'<option value = "Manager">Manager</option>')
+        if data.get("Position") == "Manager":
+            modify_user += (f'<option value = "Cashier">Cashier</option>'
+                            f'<option value = "Warehouseman">Warehouseman</option>'
+                            f'<option value = "Cashier/Warehouseman">Cashier/Warehouseman</option>'
+                            f'<option value = "Manager" selected>Manager</option>')
+        modify_user += (f'</select>'
+                        f'<br>'
+                        f'<br>'
+                        f'<br>'
+                        f'<div>'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'<a href="{url_for("user_management")}">'
+                        f'<input class="selection_button" type="button" value="Cancel">'
+                        f'</a>'
+                        f'</div>'
+                        f'</form>'
+                        f'<br>'
+                        f'<br>'
+                        f'<br>'
+                        f'<br>'
+                        f'<br>'
+                        f'<div>'
+                        f'<div class="headingsContainer">'
+                        f'<h1>Other Options</h1>'
+                        f'</div>'
+                        f'<a href="{url_for("reset_user", employee_id=data.get("EmployeeID"))}">'
+                        f'<input class="selection_button" type="button" value="Reset Password">'
+                        f'</a>'
+                        f'<a href="{url_for("delete_user", employee_id=data.get("EmployeeID"))}">'
+                        f'<input class="selection_button" type="button" value="Delete">'
+                        f'</a>'
+                        f'</div>'
+                        )
         return modify_user
 
     if form_type == 'delete_user':
@@ -534,7 +606,6 @@ def get_user_management_form(form_type, data):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-
     # Prompt System Administrator for the organization's email server, email, and password
     # global server
     # global organizational_email
