@@ -19,6 +19,11 @@ h3 {
     text-align: center;
 }
 
+h4 {
+    color: red;
+    font-family: Arial;
+}
+
 h6 {
     color: red;
     font-family: Arial;

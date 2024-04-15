@@ -38,7 +38,9 @@
 
     <main>
         <div class="left-section">
-            <button type="button">Add</button>
+            <a href={{ url_for('add_user') }}>
+                <button type="button">Add</button>
+            </a>
             <a id="modify-btn" href="#" style="display: none;">
                 <button type="button">Modify</button>
             </a>
@@ -46,23 +48,24 @@
 
         <!-- Right section -->
         <div class="right-section">
-            <div class="search-menu">
+            <form class="search-menu" method="post">
                 <div class="search-flex">
                     <div class="search-section">
                         <input type="text" id="search" name="search" placeholder="Search">
                         <input type="submit" value="Search">
                     </div>
                     <div class="search-section">
-                        <label for="searchBy">Search By:</label>
-                        <select id="searchBy" name="searchBy">
-                            <option value="EmployeeID" selected>EmployeeID</option>
-                            <option value="Username">Username</option>
-                            <option value="Last Name">Last Name</option>
+                        <label for="search_by">Search By:</label>
+                        <select id="search_by" name="search_by">
+                            <option value="EmployeeID" {% if field == "EmployeeID" %} selected {% endif %}>EmployeeID</option>
+                            <option value="Username" {% if field == "Username" %} selected {% endif %}>Username</option>
+                            <option value="Last_Name" {% if field == "Last_Name" %} selected {% endif %}>Last_Name</option>
                         </select>
                     </div>
                 </div>
-            </div>
+            </form>
             <div class="table-section">
+            {% if users %}
     <table class="employee-table">
         <thead>
             <tr>
@@ -77,6 +80,7 @@
         </thead>
         <tbody>
             <!-- Add rows of data here -->
+
             {% for user in users %}
                 <tr data-user-id="{{ user.EmployeeID }}" onclick="selectRow(this)">
                     <td>{{ user.EmployeeID }}</td>
@@ -91,6 +95,9 @@
 
         </tbody>
     </table>
+    {% else %}
+    <h1>No Matches Found</h1>
+    {% endif %}
 </div>
             </div>
         </div>
