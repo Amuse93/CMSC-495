@@ -3,12 +3,14 @@ import sqlite3
 
 
 class ProductCache:
+    # The ProductCache constructor
     def __init__(self, db_name):
-        self.cache_expiry = 3600  # Cache expiry time in seconds (e.g., 1 hour)
+        self.cache_expiry = 3000  # Cache expiry time in seconds (5 min)
         self.last_cache_update_time = None
         self.cached_product_data = None
         self.db_name = db_name
 
+    # Returns the product data
     def get_product_data(self):
         if self.last_cache_update_time is None or time.time() - self.last_cache_update_time > self.cache_expiry:
             # Fetch product data from the database
@@ -17,6 +19,11 @@ class ProductCache:
 
         return self.cached_product_data
 
+    # Returns the time last updated
+    def get_last_cache_update_time(self):
+        return self.last_cache_update_time
+
+    # Pulls the products sorted by ProductID
     def fetch_sorted_products(self):
         # Connect to the database
         conn = sqlite3.connect(self.db_name)
@@ -46,6 +53,3 @@ class ProductCache:
             products.append(product)
 
         return products
-
-    def get_last_cache_update_time(self):
-        return self.last_cache_update_time
