@@ -82,9 +82,9 @@ class InventoryCache:
         inventory = []
         for row in rows:
             record = {
-                "ShelfID": row[0],
                 "ProductID": row[1],
-                "Quantity": row[2]
+                "Quantity": row[2],
+                "ShelfID": row[0]
             }
             inventory.append(record)
 

@@ -273,7 +273,6 @@ def configure_routes(app):
             code = (f'<h1>One-Time Password</h1><br>'
                     f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
                     f'<p>{password}</p><br><br>'
-                    f'<h3>The account has been reset.<br>Provide the user with the one-time password.</h3><br>'
                     f'<a href="{url_for('modify_user', employee_id=data.get("EmployeeID"))}">'
                     f'<input class="selection_button" type="button" value="OK">'
                     f'</a>')
@@ -288,8 +287,6 @@ def configure_routes(app):
         code = '<h1>Report Generation</h1>'
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
-
-
 
 
 # Set up the Flask app
@@ -341,7 +338,7 @@ def login(username, password):
             num_tries = cursor.fetchone()[0]
 
             # Check if the user has not exceeded the maximum number of tries (less than 3)
-            if num_tries < 3:
+            if num_tries <= 3:
                 # Get the stored password for the user
                 cursor.execute("SELECT Password FROM Users WHERE Username = ?", (username,))
                 stored_password = cursor.fetchone()[0]

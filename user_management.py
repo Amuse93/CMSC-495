@@ -28,10 +28,15 @@ class UserManagement:
 
     def add_user(self, user_information):
         """ Adds a User object into the database """
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
+        user_exists = self.check_if_exists("EmployeeID", user_information[0])
 
-        print(user_information[6])
+        if user_exists != 0:
+            return 1
+
+        username_exists = self.check_if_exists("Username", user_information[1])
+
+        if username_exists != 0:
+            return 2
 
         if user_information[0].isnumeric() is False:
             return 3
@@ -46,37 +51,24 @@ class UserManagement:
         if user_information[6] is None:
             return 8
 
-        # Check if the username exists
-        cursor.execute("SELECT COUNT(*) FROM Users WHERE EmployeeID = ?", (user_information[0],))
-        user_exists = cursor.fetchone()[0]
-
-        if user_exists == 0:
-            cursor.execute("SELECT COUNT(*) FROM Users WHERE Username = ?", (user_information[1],))
-            user_exists = cursor.fetchone()[0]
-
-            if user_exists == 0:
-                password = generate_random_password()
-                hashed_password = sha256_crypt.hash(password)
-                script = [(
-                    "INSERT INTO Users VALUES ("
-                    f"{user_information[0]},"
-                    f"'{user_information[1]}',"
-                    f"'{hashed_password}',"
-                    f"'{user_information[2]}',"
-                    f"'{user_information[3]}',"
-                    f"'{user_information[4]}',"
-                    f"'{user_information[5]}',"
-                    f"'{user_information[6]}',"
-                    "1,"
-                    "0"
-                    ");"
-                )]
-                self.access_db(script)
-                return password
-            else:
-                return 2
-        else:
-            return 1
+        password = generate_random_password()
+        hashed_password = sha256_crypt.hash(password)
+        script = [(
+            "INSERT INTO Users VALUES ("
+            f"{user_information[0]},"
+            f"'{user_information[1]}',"
+            f"'{hashed_password}',"
+            f"'{user_information[2]}',"
+            f"'{user_information[3]}',"
+            f"'{user_information[4]}',"
+            f"'{user_information[5]}',"
+            f"'{user_information[6]}',"
+            "1,"
+            "0"
+            ");"
+        )]
+        self.access_db(script)
+        return password
 
     def delete_user(self, employee_id):
         """ Deletes a selected User object from the database. """
@@ -118,6 +110,10 @@ class UserManagement:
 
     def modify_user(self, user_information):
         """ Updates a selected User's information in the database. """
+        username_exists = self.check_if_exists("ProductID", user_information[1])
+
+        if (username_exists != 0) or (username_exists != 1):
+            return 2
 
         if len(user_information[1]) > 60:
             return 4
@@ -217,6 +213,21 @@ class UserManagement:
             users.append(user)
 
         return users
+
+    def check_if_exists(self, field, param):
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
+
+        query = f"SELECT COUNT(*) FROM User WHERE {field} = ?"
+
+        # Check if the username exists
+        cursor.execute(query, (param,))
+        user_exists = cursor.fetchone()[0]
+
+        # Close the connection
+        conn.close()
+
+        return user_exists
 
     def access_db(self, script):
         """ Allows scripts to be executed for updating the database """
