@@ -8,11 +8,10 @@
     <title>{{ title }}</title>
     <!-- Uncomment the following line to use the stylesheet -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/styles/style.css') }}">
-    <!-- <link rel="stylesheet" type="text/css" href="C:/Users/andre/OneDrive/Desktop/Education/1. Current/2. CMSC 495 - Capstone in Computer Science/Alpha Store Management System/static/styles/style.css"> -->
 
-    <script src="{{ url_for('static', filename='js/user_management_script.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/product_management_script.js') }}"></script>
 
-
+    <script src="{{ url_for('static', filename='js/price_format_script.js') }}"></script>
 
 
 </head>
@@ -38,7 +37,7 @@
 
     <main>
         <div class="left-section">
-            <a href={{ url_for('add_user') }}>
+            <a href={{ url_for('add_product') }}>
                 <button type="button">Add</button>
             </a>
             <a id="modify-btn" href="#" style="display: none;">
@@ -57,39 +56,32 @@
                     <div class="search-section">
                         <label for="search_by">Search By:</label>
                         <select id="search_by" name="search_by">
-                            <option value="EmployeeID" {% if field == "EmployeeID" %} selected {% endif %}>EmployeeID</option>
-                            <option value="Username" {% if field == "Username" %} selected {% endif %}>Username</option>
-                            <option value="Last_Name" {% if field == "Last_Name" %} selected {% endif %}>Last_Name</option>
+                            <option value="ProductID" {% if field == "ProductID" %} selected {% endif %}>ProductID</option>
+                            <option value="Product_Name" {% if field == "Product_Name" %} selected {% endif %}>Product_Name</option>
                         </select>
                     </div>
                 </div>
             </form>
             <div class="table-section">
-            {% if users %}
-    <table class="employee-table">
+            {% if products %}
+    <table class="product-table">
         <thead>
             <tr>
-                <th>EmployeeID</th>
-                <th>Username</th>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Date of Birth</th>
-                <th>Phone Number</th>
-                <th>Roles</th>
+                <th>ProductID</th>
+                <th>Product_Name</th>
+                <th>Price</th>
+                <th>Total_In_Stock</th>
             </tr>
         </thead>
         <tbody>
             <!-- Add rows of data here -->
 
-            {% for user in users %}
-                <tr data-user-id="{{ user.EmployeeID }}" onclick="selectRow(this)">
-                    <td>{{ user.EmployeeID }}</td>
-                    <td>{{ user.Username }}</td>
-                    <td>{{ user.First_Name }}</td>
-                    <td>{{ user.Last_Name }}</td>
-                    <td>{{ user.DOB }}</td>
-                    <td>{{ user.Phone_Number }}</td>
-                    <td>{{ user.Position }}</td>
+            {% for product in products %}
+                <tr data-product-id="{{ product.ProductID }}" onclick="selectRow(this)">
+                    <td>{{ product.ProductID }}</td>
+                    <td>{{ product.Product_Name }}</td>
+                    <td class="number-value">{{ product.Price }}</td>
+                    <td class="number-value">{{ product.Total_In_Stock }}</td>
                 </tr>
             {% endfor %}
 

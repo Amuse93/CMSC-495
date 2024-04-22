@@ -1,13 +1,18 @@
 # Alpha Store Management System
-
+import json
 import sqlite3
 import os
 import secrets
 # import getpass
 import re
+from datetime import datetime
+
 # from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from passlib.hash import sha256_crypt
+
+from inventory_management import InventoryManagement
+from product_management import ProductManagement
 # from product_cache import ProductCache
 from user_management import UserManagement
 
@@ -22,7 +27,10 @@ sql_file = 'static/Create_tables.sql'
 def configure_routes(app):
     # Variables
     user_management_system = UserManagement(db_name)
+    product_management_system = ProductManagement(db_name)
+    inventory_management_system = InventoryManagement(db_name)
 
+    # General Section
     # Index (Login) page
     @app.route('/', methods=['GET', 'POST'])
     def index():
@@ -84,6 +92,8 @@ def configure_routes(app):
             return redirect(url_for('index'))
         return render_template('home.html', username=session.get('Username'), role=session.get('Position'))
 
+    #######################################################################
+    # Checkout Section
     @app.route('/checkout')
     def checkout():
         # if ((session.get('Position') != 'Cashier') or (session.get('Position') != 'Cashier/Warehouseman')
@@ -94,25 +104,488 @@ def configure_routes(app):
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
 
-    @app.route('/inventory_management')
+    #######################################################################
+    # Inventory Management Section
+    @app.route('/inventory_management/', methods=['GET', 'POST'])
     def inventory_management():
-        # if ((session.get('Position') != 'Warehouseman') or (session.get('Position') != 'Cashier/Warehouseman')
-        # or (session.get('Position') != 'Manager')):
-        #   return redirect(url_for('home'))
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
         title = 'Inventory Management'
-        code = '<h1>Inventory Management</h1>'
+        field = 'ProductID'
+        products = inventory_management_system.list_shelf_products()
+
+        if request.method == 'POST':
+            field = request.form.get('search_by')
+            param = request.form.get('search')
+            if (param is not None) and (len(param) <= 60):
+                products = inventory_management_system.search_shelf_products(field, param)
+            else:
+                products = inventory_management_system.list_shelf_products()
+
+        return render_template('inventory_management_template.html',
+                               username=session.get('Username'), title=title, products=products, field=field)
+
+    @app.route('/inventory_management/shelf_view', methods=['GET', 'POST'])
+    def inventory_management_shelf_view():
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
+        title = 'Inventory Management'
+        shelves = inventory_management_system.list_shelves()
+        field = 'ShelfID'
+
+        if request.method == 'POST':
+            param = request.form.get('search')
+            if (param is not None) and (len(param) <= 60):
+                shelves = inventory_management_system.search_shelves(param)
+            else:
+                shelves = inventory_management_system.list_shelves()
+
+        return render_template('inventory_management_template_shelf_view.html',
+                               username=session.get('Username'), title=title, shelves=shelves,
+                               field=field)
+
+    @app.route('/inventory_management/shelf/<shelf_id>', methods=['GET', 'POST'])
+    def inventory_management_shelf(shelf_id):
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
+        title = 'Inventory Management'
+        field = 'ShelfID'
+        products = inventory_management_system.search_shelf_products(field, shelf_id)
+
+        if request.method == 'POST':
+            field = request.form.get('search_by')
+            param = request.form.get('search')
+            if (param is not None) and (len(param) <= 60):
+                products = inventory_management_system.search_shelf_products_by_shelf(field, param, shelf_id)
+            else:
+                products = inventory_management_system.list_shelf_products()
+
+        return render_template('inventory_management_shelf_template.html',
+                               username=session.get('Username'), title=title, shelf_id=shelf_id, products=products)
+
+    @app.route('/add_shelf', methods=['GET', 'POST'])
+    def add_shelf():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Add Shelf'
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_inventory_management_form('add_shelf', data)
+
+        if request.method == 'POST':
+            shelf_data = [request.form.get('shelf_id')]
+
+            error = inventory_management_system.add_shelf(shelf_data)
+
+            if error == 1:
+                message = f'<h4>A shelf with the shelf_id {shelf_data[0]} already exists!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_shelf', data)
+            elif error == 3:
+                message = f'<h4>The length of the ShelfID must equal 7!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_shelf', data)
+            elif error == 4:
+                message = f'<h4>ShelfID must be begin with "WH" or "SF"!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_shelf', data)
+            else:
+                code = (f'<h1>Add Product</h1><br>'
+                        f'<h3>Shelf was added successfully.</h3><br>'
+                        f'<a href="{url_for('inventory_management_shelf_view')}">'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'</a>')
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
 
-    @app.route('/product_management')
+    @app.route('/delete_shelf/<shelf_id>', methods=['GET', 'POST'])
+    def delete_shelf(shelf_id):
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Delete Shelf'
+        message = ''
+        data = inventory_management_system.search_shelves(shelf_id)[0]
+        data["Message"] = message
+        code = get_inventory_management_form('delete_shelf', data)
+
+        if request.method == 'POST':
+
+            error = inventory_management_system.delete_shelf(data.get("ShelfID"))
+
+            if error == 1:
+                message = f'<h4>The shelf with the ShelfID {shelf_id} does not exist!</h4>'
+                data["Message"] = message
+                code = get_inventory_management_form('delete_shelf', data)
+
+            elif error == 2:
+                message = (f'<h4>The shelf must be emptied before it can be deleted!</h4>'
+                           f'<h4>Please move the remaining products to another shelf '
+                           f'or remove the product record from the shelf if the quantity of the product is 0!</h4>')
+                data["Message"] = message
+                code = get_inventory_management_form('delete_shelf', data)
+
+            else:
+                code = (f'<h1>Delete Shelf {data.get("ShelfID")}</h1>'
+                        f'<h3>This Shelf has been successfully deleted!</h3><br>'
+                        f'<a href="{url_for('inventory_management_shelf_view')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
+
+    @app.route('/add_product_to_shelf', methods=['GET', 'POST'])
+    def add_product_to_shelf():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Add Product'
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_inventory_management_form('add_product_to_shelf', data)
+
+        if request.method == 'POST':
+            shelf_product_data = [request.form.get('shelf_id'), request.form.get('product_id')]
+
+            error = inventory_management_system.add_product_to_shelf(shelf_product_data)
+
+            if error == 1:
+                message = f'<h4>The shelf with Shelf ID {shelf_product_data[0]} does not exist!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_product_to_shelf', data)
+            elif error == 2:
+                message = f'<h4>The product with the product ID {shelf_product_data[1]} does not exist!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_product_to_shelf', data)
+            elif error == 3:
+                message = f'<h4>The this product already has a record a warehouse shelf!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_product_to_shelf', data)
+            elif error == 4:
+                message = f'<h4>The this product already has a record a sales floor shelf!</h4>'
+                data = {"Message": message}
+                code = get_inventory_management_form('add_product_to_shelf', data)
+            else:
+                code = (f'<h1>Add Product</h1><br>'
+                        f'<h3>The Product was added successfully.</h3><br>'
+                        f'<a href="{url_for('inventory_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    @app.route('/delete_product_from_shelf/<product_id>&<shelf_id>', methods=['GET', 'POST'])
+    def delete_product_from_shelf(product_id, shelf_id):
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Delete Product From Shelf'
+        message = ''
+        data = inventory_management_system.search_shelf_products_by_shelf('ProductID', product_id, shelf_id)[0]
+        data["Message"] = message
+        code = get_inventory_management_form('delete_product_from_shelf', data)
+
+        if request.method == 'POST':
+
+            error = inventory_management_system.delete_product_from_shelf(data.get('ProductID'), data.get('ShelfID'))
+
+            if error == 1:
+                message = f'<h4>The quantity of the Shelf_Product record must be 0!</h4>'
+                data["Message"] = message
+                code = get_inventory_management_form('delete_product_from_shelf', data)
+            else:
+                code = (f'<h1>Delete Product {data.get("ProductID")} From Shelf {data.get("ShelfID")}</h1>'
+                        f'<h3>This Product has been successfully deleted from the shelf!</h3><br>'
+                        f'<a href="{url_for('inventory_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
+
+    @app.route('/receive_order', methods=['GET', 'POST'])
+    def receive_order():
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
+        title = 'Receive Order'
+        products_list = product_management_system.list_products()  # Use a different variable name
+
+        if request.method == 'POST':
+
+            code = (f'<h1>Receive Order</h1><br>'
+                    f'<h3>The order was received successfully.</h3><br>'
+                    f'<a href="{url_for("inventory_management")}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
+
+            return render_template('form_template.html',
+                                   username=session.get('Username'), title=title, code=code)
+
+        return render_template('receive_order.html', username=session.get('Username'), title=title,
+                               products=products_list)
+
+    @app.route('/submit_received_order', methods=['POST'])
+    def submit_order():
+        title = 'Receive Order'
+        order_data = request.json
+
+        # Pass the order data to the receive_order function
+        inventory_management_system.receive_order(order_data)
+
+        if request.method == 'POST':
+
+            code = (f'<h1>Receive Order</h1><br>'
+                    f'<h3>The order was received successfully.</h3><br>'
+                    f'<a href="{url_for("inventory_management")}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
+
+            return render_template('form_template.html',
+                                   username=session.get('Username'), title=title, code=code)
+
+    @app.route('/move_product/<product_id>&<shelf_id>', methods=['GET', 'POST'])
+    def move_product(product_id, shelf_id):
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
+        title = 'Move Product'
+        data = {}
+        message = ''
+        data['Message'] = message
+        data['ProductID'] = product_id
+        data['ShelfID'] = shelf_id
+        code = get_inventory_management_form('move_product', data)
+
+        if request.method == 'POST':
+            shelf_product_info = [product_id, shelf_id, request.form.get('to_shelf_id')]
+
+            error = inventory_management_system.move_product(shelf_product_info)
+
+            if error == 1:
+                message = f"<h4>The product with the product ID {shelf_product_info[0]} was not found!</h4>"
+                data['Message'] = message
+                code = get_inventory_management_form('move_product', data)
+            elif error == 2:
+                message = f"<h4>The shelf with the shelf ID {shelf_product_info[1]} was not found!</h4>"
+                data['Message'] = message
+                code = get_inventory_management_form('move_product', data)
+            elif error == 3:
+                message = f"<h4>The shelf with the shelf ID {shelf_product_info[2]} was not found!</h4>"
+                data['Message'] = message
+                code = get_inventory_management_form('move_product', data)
+            elif error == 4:
+                message = f"<h4>A product from a warehouse shelf can only be moved to another warehouse shelf!</h4>"
+                data['Message'] = message
+                code = get_inventory_management_form('move_product', data)
+            elif error == 5:
+                message = f"<h4>A product from a sales floor shelf can only be moved to another sales floor shelf!</h4>"
+                data['Message'] = message
+                code = get_inventory_management_form('move_product', data)
+            else:
+                code = (f'<h1>Move Product</h1><br>'
+                        f'<h3>The Product was moved successfully.</h3><br>'
+                        f'<a href="{url_for('inventory_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    @app.route('/stock_product/<product_id>', methods=['GET', 'POST'])
+    def stock_product(product_id):
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
+        title = 'Stock Product'
+        data = {}
+        message = ''
+        data['Message'] = message
+        data['ProductID'] = product_id
+        code = get_inventory_management_form('stock_product', data)
+
+        if request.method == 'POST':
+            product = [product_id, request.form.get('quantity')]
+
+            inventory_management_system.stock_product(product)
+
+            code = (f'<h1>Stock Product</h1><br>'
+                    f'<h3>The product was stocked successfully.</h3><br>'
+                    f'<a href="{url_for('inventory_management')}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
+
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    @app.route('/report_waste/<product_id>&<shelf_id>', methods=['GET', 'POST'])
+    def report_waste(product_id, shelf_id):
+        if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
+        title = 'Report Waste'
+        data = {}
+        message = ''
+        data['Message'] = message
+        data['ProductID'] = product_id
+        data['ShelfID'] = shelf_id
+        code = get_inventory_management_form('report_waste', data)
+
+        if request.method == 'POST':
+            report_number = get_report_number()
+            now = datetime.now()
+            formatted_datetime = now.strftime('%Y-%m-%d')
+            report = [report_number, product_id, shelf_id, request.form.get('quantity'), request.form.get('reason'),
+                      request.form.get('description'), session.get('EmployeeID'), formatted_datetime]
+
+            inventory_management_system.report_waste(report)
+
+            code = (f'<h1>Report Waste</h1><br>'
+                    f'<h3>The report was submitted successfully.</h3><br>'
+                    f'<a href="{url_for('inventory_management')}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    #######################################################################
+    # Product Management Section
+    @app.route('/product_management', methods=['GET', 'POST'])
     def product_management():
-        # if session.get('Position') != 'Manager':
-        #   return redirect(url_for('home'))
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
         title = 'Product Management'
-        code = '<h1>Product Management</h1>'
+        products = product_management_system.list_products()
+        field = 'ProductID'
+
+        if request.method == 'POST':
+            field = request.form.get('search_by')
+            param = request.form.get('search')
+            if (param is not None) and (len(param) <= 60):
+                products = product_management_system.search_products(field, param)
+            else:
+                products = product_management_system.list_products()
+
+        return render_template('product_management_template.html',
+                               username=session.get('Username'), title=title, products=products, field=field)
+
+    @app.route('/add_product', methods=['GET', 'POST'])
+    def add_product():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Add Product'
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_product_management_form('add_product', data)
+
+        if request.method == 'POST':
+            product_data = [request.form.get('product_id'), request.form.get('product_name'), request.form.get('price')]
+
+            error = product_management_system.add_product(product_data)
+
+            if error == 1:
+                message = f'<h4>A product with the product_id {product_data[0]} already exists!</h4>'
+                data = {"Message": message}
+                code = get_product_management_form('add_product', data)
+            elif error == 2:
+                message = f'<h4>A product with the product name {product_data[1]} already exists!</h4>'
+                data = {"Message": message}
+                code = get_product_management_form('add_product', data)
+            elif error == 3:
+                message = f'<h4>The ProductID is too long!</h6>'
+                data = {"Message": message}
+                code = get_product_management_form('add_product', data)
+            elif error == 4:
+                message = f'<h4>Product name is too long!</h4>'
+                data = {"Message": message}
+                code = get_product_management_form('add_product', data)
+            elif error == 5:
+                message = f'<h4>The price must be a number!</h4>'
+                data = {"Message": message}
+                code = get_product_management_form('add_product', data)
+
+            else:
+                code = (f'<h1>Add Product</h1><br>'
+                        f'<h3>The Product was added successfully.</h3><br>'
+                        f'<a href="{url_for('product_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
 
+    @app.route('/modify_product/<product_id>', methods=['GET', 'POST'])
+    def modify_product(product_id):
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Modify Product'
+        message = ''
+        data = product_management_system.get_product_data(product_id)
+        data["Message"] = message
+        data['ProductID'] = product_id
+        code = get_product_management_form('modify_product', data)
+
+        if request.method == 'POST':
+            product_data = [product_id, request.form.get('product_name'), request.form.get('price')]
+
+            error = product_management_system.modify_product(product_data)
+
+            if error == 2:
+                message = f'<h4>Product name already exists!</h4>'
+                data["Message"] = message
+                code = get_product_management_form('modify_product', data)
+            elif error == 4:
+                message = f'<h4>Product Name is too long!</h4>'
+                data["Message"] = message
+                code = get_product_management_form('modify_product', data)
+            elif error == 5:
+                message = f'<h4>Price must be a number!</h4>'
+                data["Message"] = message
+                code = get_product_management_form('modify_product', data)
+
+            else:
+                code = (f'<h1>Modify Product {product_data[0]} ({product_data[1]})</h1>'
+                        f'<h3>This product has been successfully updated!</h3><br>'
+                        f'<a href="{url_for('product_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
+
+    @app.route('/delete_product/<product_id>', methods=['GET', 'POST'])
+    def delete_product(product_id):
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Delete Product'
+        message = ''
+        data = product_management_system.get_product_data(product_id)
+        data["Message"] = message
+        code = get_product_management_form('delete_product', data)
+
+        if request.method == 'POST':
+
+            error = product_management_system.delete_product(data.get("ProductID"))
+
+            if error == 1:
+                message = f'<h4>The product {product_id} does not exist!</h4>'
+                data["Message"] = message
+                code = get_product_management_form('modify_product', data)
+            elif error == 2:
+                message = (f'<h4>The product {product_id} has shelf records! '
+                           f'These records must first be deleted using the inventory management system!</h4>')
+                data["Message"] = message
+                code = get_product_management_form('modify_product', data)
+            else:
+                code = (f'<h1>Delete Product {data.get("ProductID")} ({data.get("Product_Name")})</h1>'
+                        f'<h3>This Product has been successfully deleted!</h3><br>'
+                        f'<a href="{url_for('product_management')}">'
+                        f'<input class="selection_button" type="button" value="OK">'
+                        f'</a>')
+
+        return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
+
+    #######################################################################
+    # User Management Section
     @app.route('/user_management', methods=['GET', 'POST'])
     def user_management():
         if session.get('Position') != 'Manager':
@@ -238,7 +711,7 @@ def configure_routes(app):
     def delete_user(employee_id):
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
-        title = 'Modify User'
+        title = 'Delete User'
         message = ''
         data = user_management_system.get_user_data(employee_id)
         data["Message"] = message
@@ -279,6 +752,8 @@ def configure_routes(app):
 
         return render_template('form_template.html', username=session.get('Username'), title=title, code=code)
 
+    #######################################################################
+    # Report Generation Section
     @app.route('/report_generation')
     def report_generation():
         # if session.get('Position') != 'Manager':
@@ -435,6 +910,236 @@ def create_password_function(employee_id, password1, password2):
 # Logs off the user by clearing the session data
 def logoff():
     session.clear()
+
+
+def get_inventory_management_form(form_type, data):
+    if form_type == 'add_shelf':
+        add_shelf = (f'<h1>Add Shelf</h1>'
+                     f'{data.get("Message")}'
+                     f'<form action="{url_for('add_shelf')}" id="add_shelf" method="post">'
+                     f'<label for="shelf_id">ShelfID: </label>'
+                     f'<input type="text" id="shelf_id" name="shelf_id" size="25" autocomplete="off" required>'
+                     f'<br>'
+                     f'<br>'
+                     f'<br>'
+                     f'<div>'
+                     f'<input class="selection_button" type="submit" value="OK">'
+                     f'<a href="{url_for('inventory_management_shelf_view')}">'
+                     f'<input class="selection_button" type="button" value="Cancel">'
+                     )
+        return add_shelf
+
+    if form_type == 'delete_shelf':
+        delete_shelf = (f'<h1>Delete Shelf {data.get("ShelfID")}</h1>'
+                        f'{data.get("Message")}'
+                        f'<form action="{url_for('delete_shelf', shelf_id=data.get("ShelfID"))}" '
+                        f'id="delete_shelf" method="post">'
+                        f'<h3>Are you sure you want to delete this shelf?</h3>'
+                        f'<br>'
+                        f'<div>'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'<a href="{url_for("inventory_management_shelf_view")}">'
+                        f'<input class="selection_button" type="button" value="Cancel">'
+                        f'</a>'
+                        f'</div>'
+                        f'</form>'
+                        )
+        return delete_shelf
+
+    if form_type == 'add_product_to_shelf':
+        add_product_to_shelf = (f'<h1>Add Product To Shelf</h1>'
+                                f'{data.get("Message")}'
+                                f'<form action="{url_for('add_product_to_shelf')}" '
+                                f'id="add_product_to_shelf" method="post">'
+                                f'<label for="product_id">ProductID: </label>'
+                                f'<input type="text" id="product_id" name="product_id" '
+                                f'size="25" autocomplete="off" required>'
+                                f'<br>'
+                                f'<br>'
+                                f'<label for="shelf_id">ShelfID: </label>'
+                                f'<input type="text" id="shelf_id" name="shelf_id" '
+                                f'size="25" autocomplete="off" required>'
+                                f'<br>'
+                                f'<br>'
+                                f'<br>'
+                                f'<div>'
+                                f'<input class="selection_button" type="submit" value="OK">'
+                                f'<a href="{url_for('inventory_management')}">'
+                                f'<input class="selection_button" type="button" value="Cancel">'
+                                )
+        return add_product_to_shelf
+
+    if form_type == 'delete_product_from_shelf':
+        delete_product_from_shelf = (f'<h1>Delete Product {data.get("ProductID")} From Shelf {data.get("ShelfID")}</h1>'
+                                     f''
+                                     f'{data.get("Message")}'
+                                     f'<form action="{url_for('delete_product_from_shelf', 
+                                                              product_id=data.get("ProductID"), 
+                                                              shelf_id=data.get("ShelfID"))}" '
+                                     f'id="delete_product_from_shelf" method="post">'
+                                     f'<h3>Are you sure you want to delete this Product_Shelf record?</h3>'
+                                     f'<br>'
+                                     f'<div>'
+                                     f'<input class="selection_button" type="submit" value="OK">'
+                                     f'<a href="{url_for("inventory_management")}">'
+                                     f'<input class="selection_button" type="button" value="Cancel">'
+                                     f'</a>'
+                                     f'</div>'
+                                     f'</form>'
+                                     )
+        return delete_product_from_shelf
+
+    if form_type == 'move_product':
+        move_product =(f'<h1>Move Product {data.get('ProductID')} From Shelf {data.get('ShelfID')} To:</h1>'
+                       f'{data.get("Message")}'
+                       f'<form action="{url_for('move_product', 
+                                                product_id=data.get('ProductID'), 
+                                                shelf_id=data.get('ShelfID'))}" '
+                       f'id="move_product" method="post">'
+                       f'<label for="to_shelf_id">ShelfID: </label>'
+                       f'<input type="text" id="to_shelf_id" name="to_shelf_id" size="25" autocomplete="off" required>'
+                       f'<br>'
+                       f'<br>'
+                       f'<br>'
+                       f'<div>'
+                       f'<input class="selection_button" type="submit" value="OK">'
+                       f'<a href="{url_for('inventory_management_shelf_view')}">'
+                       f'<input class="selection_button" type="button" value="Cancel">'
+                       )
+
+        return move_product
+
+    if form_type == 'stock_product':
+        stock_product = (f'<h1>Stock Product {data.get('ProductID')}</h1>'
+                         f'{data.get("Message")}'
+                         f'<form action="{url_for('stock_product', product_id=data.get('ProductID'))}" '
+                         f'id="move_product" method="post">'
+                         f'<label for="quantity">Quantity: </label>'
+                         f'<input type="text" id="quantity" name="quantity" size="25" autocomplete="off" required>'
+                         f'<br>'
+                         f'<br>'
+                         f'<br>'
+                         f'<div>'
+                         f'<input class="selection_button" type="submit" value="OK">'
+                         f'<a href="{url_for('inventory_management_shelf_view')}">'
+                         f'<input class="selection_button" type="button" value="Cancel">'
+                         )
+
+        return stock_product
+
+    if form_type == 'report_waste':
+        report_waste = (f'<h1>Report Waste for Product {data.get('ProductID')} From Shelf {data.get("ShelfID")}</h1>'
+                        f'{data.get("Message")}'
+                        f'<form action="{url_for('report_waste', 
+                                                 product_id=data.get('ProductID'), 
+                                                 shelf_id=data.get("ShelfID"))}" '
+                        f'id="report_waste" method="post">'
+                        f'<label for="quantity">Quantity: </label>'
+                        f'<input type="text" id="quantity" name="quantity" size="25" autocomplete="off" required>'
+                        f'<br>'
+                        f'<br>'
+                        f'<label for="reason">Reason: </label>'
+                        f'<select id="reason" name="reason" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Expired">Expired</option>'
+                        f'<option value = "Damaged">Damaged</option>'
+                        f'<option value = "Stolen">Stolen</option>'
+                        f'</select>'
+                        f'<br>'
+                        f'<br>'
+                        f'<label for="description">Description: </label>'
+                        f'<textarea id="description" name="description" rows="4" cols="50" '
+                        f'autocomplete="off" required></textarea>'
+                        f'<br>'
+                        f'<br>'
+                        f'<div>'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'<a href="{url_for('inventory_management_shelf_view')}">'
+                        f'<input class="selection_button" type="button" value="Cancel">'
+                        )
+
+        return report_waste
+
+
+def get_product_management_form(form_type, data):
+    if form_type == 'add_product':
+        add_product = (f'<h1>Add Product</h1>'
+                       f'{data.get("Message")}'
+                       f'<form action="{url_for('add_product')}" id="add_product" method="post">'
+                       f'<label for="product_id">ProductID: </label>'
+                       f'<input type="text" id="product_id" name="product_id" size="25" autocomplete="off" required>'
+                       f'<br>'
+                       f'<br>'
+                       f'<label for="product_name">Product_Name: </label>'
+                       f'<input type="text" id="product_name" name="product_name" size="25" autocomplete="off" required>'
+                       f'<br>'
+                       f'<br>'
+                       f'<label for="price">Price: </label>'
+                       f'<input type="text" id="price" name="price" size="25" autocomplete="off" required>'
+                       f'<br>'
+                       f'<br>'
+                       f'<input class="selection_button" type="submit" value="OK">'
+                       f'<a href="{url_for('product_management')}">'
+                       f'<input class="selection_button" type="button" value="Cancel">'
+                       f'</a>'
+                       f'</div>'
+                       f'</form>'
+                       )
+        return add_product
+
+    if form_type == 'modify_product':
+        modify_product = (f'<h1>Modify Product {data.get("ProductID")} ({data.get("Product_Name")})</h1>'
+                          f'{data.get("Message")}'
+                          f'<form action="{url_for('modify_product', product_id=data.get("ProductID"))}" '
+                          f'id="modify_product" method="post">'
+                          f'<label for="product_name">Product_Name: </label>'
+                          f'<input type="text" id="product_name" name="product_name" size="25" autocomplete="off" '
+                          f'value="{data.get("Product_Name")}" required>'
+                          f'<br>'
+                          f'<br>'
+                          f'<label for="price">Price: </label>'
+                          f'<input type="text" id="price" name="price" size="25" autocomplete="off" '
+                          f'value="{data.get("Price")}" required>'
+                          f'<br>'
+                          f'<br>'
+                          f'<input class="selection_button" type="submit" value="OK">'
+                          f'<a href="{url_for("product_management")}">'
+                          f'<input class="selection_button" type="button" value="Cancel">'
+                          f'</a>'
+                          f'</div>'
+                          f'</form>'
+                          f'<br>'
+                          f'<br>'
+                          f'<br>'
+                          f'<br>'
+                          f'<br>'
+                          f'<div>'
+                          f'<div class="headingsContainer">'
+                          f'<h1>Other Options</h1>'
+                          f'</div>'
+                          f'<a href="{url_for("delete_product", product_id=data.get("ProductID"))}">'
+                          f'<input class="selection_button" type="button" value="Delete">'
+                          f'</a>'
+                          f'</div>'
+                          )
+        return modify_product
+
+    if form_type == 'delete_product':
+        delete_product = (f'<h1>Delete Product {data.get("ProductID")} ({data.get("Product_Name")})</h1>'
+                          f'<form action="{url_for('delete_product', product_id=data.get("ProductID"))}" '
+                          f'id="delete_product" method="post">'
+                          f'<h3>Are you sure you want to delete this product?</h3>'
+                          f'<br>'
+                          f'<div>'
+                          f'<input class="selection_button" type="submit" value="OK">'
+                          f'<a href="{url_for("modify_product", product_id=data.get("ProductID"))}">'
+                          f'<input class="selection_button" type="button" value="Cancel">'
+                          f'</a>'
+                          f'</div>'
+                          f'</form>'
+                          )
+
+        return delete_product
 
 
 # Provides HTML for various forms
@@ -599,6 +1304,16 @@ def get_user_management_form(form_type, data):
                       )
 
         return reset_user
+
+
+def get_report_number():
+    now = datetime.now()
+    formatted_datetime = now.strftime('%Y%m%d%H%M%S')
+    nanoseconds = now.strftime('%f')
+    nanoseconds = int(nanoseconds) * 1000
+
+    result = 'WR-' + formatted_datetime + f"{nanoseconds:09d}"
+    return result
 
 
 # Press the green button in the gutter to run the script.

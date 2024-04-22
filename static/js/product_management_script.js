@@ -10,9 +10,10 @@ function selectRow(row) {
     let modifyBtn = document.getElementById('modify-btn');
     modifyBtn.style.display = 'block';
 
-    // Get the employee ID from the data-user-id attribute of the selected row
-    let employeeID = row.getAttribute('data-user-id');
+    // Get the product ID from the data-product-id attribute of the selected row
+    let productID = row.getAttribute('data-product-id');
+        
+    // Set the href attribute of the modify button with the product ID
+    modifyBtn.href = `/modify_product/${productID}`;
     
-    // Set the href attribute of the modify button with the employee ID
-    modifyBtn.href = `/modify_user/${employeeID}`;
 }

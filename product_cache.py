@@ -1,55 +1,58 @@
-import time
 import sqlite3
+import time
+from threading import Lock
 
 
 class ProductCache:
-    # The ProductCache constructor
     def __init__(self, db_name):
         self.cache_expiry = 3000  # Cache expiry time in seconds (5 min)
-        self.last_cache_update_time = None
+        self.last_cache_update_time = None  # Initialize to None
         self.cached_product_data = None
         self.db_name = db_name
+        self.lock = Lock()  # Lock for thread safety
 
-    # Returns the product data
-    def get_product_data(self):
-        if self.last_cache_update_time is None or time.time() - self.last_cache_update_time > self.cache_expiry:
-            # Fetch product data from the database
+    def update_cache(self):
+        """
+        Manually updates the cache with the latest product data from the database.
+        """
+        current_time = time.time()
+        with self.lock:
             self.cached_product_data = self.fetch_sorted_products()
-            self.last_cache_update_time = time.time()
+            self.last_cache_update_time = current_time
 
+    def get_product_data(self):
+        current_time = time.time()
+        if self.last_cache_update_time is None or current_time - self.last_cache_update_time > self.cache_expiry:
+            with (self.lock):
+                # Double check in case another thread updated the cache
+                if ((self.last_cache_update_time is None)
+                        or (current_time - self.last_cache_update_time > self.cache_expiry)):
+                    self.cached_product_data = self.fetch_sorted_products()
+                    self.last_cache_update_time = current_time
         return self.cached_product_data
 
-    # Returns the time last updated
     def get_last_cache_update_time(self):
         return self.last_cache_update_time
 
-    # Pulls the products sorted by ProductID
     def fetch_sorted_products(self):
-        # Connect to the database
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
+        try:
+            with sqlite3.connect(self.db_name) as conn:
+                cursor = conn.cursor()
+                query = "SELECT * FROM Product ORDER BY ProductID"
+                cursor.execute(query)
+                rows = cursor.fetchall()
 
-        # Query to select all columns from the Product table, sorted by ProductID
-        query = "SELECT * FROM Product ORDER BY ProductID"
+            products = []
+            for row in rows:
+                product = {
+                    "ProductID": row[0],
+                    "Product_Name": row[1],
+                    "Price": row[2],
+                    "Total_In_Stock": row[3]
+                }
+                products.append(product)
 
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the connection
-        conn.close()
-
-        # Convert the fetched rows to a list of dictionaries
-        products = []
-        for row in rows:
-            product = {
-                "ProductID": row[0],
-                "Product_Name": row[1],
-                "Price": row[2],
-                "Total_In_Stock": row[3]
-            }
-            products.append(product)
-
-        return products
+            return products
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+            return []

@@ -1,91 +1,80 @@
-import time
 import sqlite3
+import time
+from threading import Lock
 
 
 class InventoryCache:
-    # The InventoryCache constructor
     def __init__(self, db_name):
         self.cache_expiry = 3000  # Cache expiry time in seconds (5 min)
         self.last_cache_update_time = None
         self.cached_shelf_data = None
         self.cached_inventory_data = None
         self.db_name = db_name
+        self.lock = Lock()  # Lock for thread safety
 
-    # Returns the time last updated
     def get_last_cache_update_time(self):
         return self.last_cache_update_time
 
-    # Returns the shelf data
-    def get_shelf_data(self):
-        if self.last_cache_update_time is None or time.time() - self.last_cache_update_time > self.cache_expiry:
-            # Fetch shelf data from the database
+    def update_cache(self):
+        """
+        Manually updates the cache with the latest data from the database.
+        """
+        with self.lock:
+            self.cached_inventory_data = self.fetch_sorted_inventory()
             self.cached_shelf_data = self.fetch_sorted_shelves()
             self.last_cache_update_time = time.time()
 
+    def get_shelf_data(self):
+        current_time = time.time()
+        if self.last_cache_update_time is None or current_time - self.last_cache_update_time > self.cache_expiry:
+            with self.lock:
+                if ((self.last_cache_update_time is None)
+                        or (current_time - self.last_cache_update_time > self.cache_expiry)):
+                    self.cached_inventory_data = self.fetch_sorted_inventory()
+                    self.cached_shelf_data = self.fetch_sorted_shelves()
+                    self.last_cache_update_time = current_time
         return self.cached_shelf_data
 
-    # Pulls the shelf data from the database sorted by ShelfID
     def fetch_sorted_shelves(self):
-        # Connect to the database
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
+        try:
+            with sqlite3.connect(self.db_name) as conn:
+                cursor = conn.cursor()
+                query = "SELECT * FROM Shelf ORDER BY ShelfID"
+                cursor.execute(query)
+                rows = cursor.fetchall()
 
-        # Query to select all columns from the Product table, sorted by ProductID
-        query = "SELECT * FROM Shelf ORDER BY ShelfID"
+            shelves = [{"ShelfID": row[0]} for row in rows]
+            return shelves
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+            return []
 
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the connection
-        conn.close()
-
-        # Convert the fetched rows to a list of dictionaries
-        shelves = []
-        for row in rows:
-            shelf = {
-                "ShelfID": row[0]
-            }
-            shelves.append(shelf)
-
-        return shelves
-
-    # Returns the inventory data sorted by ShelfID
     def get_inventory_data(self):
-        if self.last_cache_update_time is None or time.time() - self.last_cache_update_time > self.cache_expiry:
-            # Fetch shelf data from the database
-            self.cached_inventory_data = self.fetch_sorted_inventory()
-            self.last_cache_update_time = time.time()
-
+        current_time = time.time()
+        if self.last_cache_update_time is None or current_time - self.last_cache_update_time > self.cache_expiry:
+            with self.lock:
+                if ((self.last_cache_update_time is None)
+                        or (current_time - self.last_cache_update_time > self.cache_expiry)):
+                    self.cached_inventory_data = self.fetch_sorted_inventory()
+                    self.cached_shelf_data = self.fetch_sorted_shelves()
+                    self.last_cache_update_time = current_time
         return self.cached_inventory_data
 
     def fetch_sorted_inventory(self):
-        # Connect to the database
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
+        try:
+            with sqlite3.connect(self.db_name) as conn:
+                cursor = conn.cursor()
+                query = """
+                    SELECT Shelf_Product.ProductID, Product.Product_Name, Shelf_Product.Quantity, Shelf_Product.ShelfID
+                    FROM Shelf_Product
+                    JOIN Product ON Shelf_Product.ProductID = Product.ProductID
+                    ORDER BY Shelf_Product.ShelfID
+                """
+                cursor.execute(query)
+                rows = cursor.fetchall()
 
-        # Query to select all columns from the Product table, sorted by ProductID
-        query = "SELECT * FROM Shelf_Product ORDER BY ShelfID"
-
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the connection
-        conn.close()
-
-        # Convert the fetched rows to a list of dictionaries
-        inventory = []
-        for row in rows:
-            record = {
-                "ProductID": row[1],
-                "Quantity": row[2],
-                "ShelfID": row[0]
-            }
-            inventory.append(record)
-
-        return inventory
+            inventory = [{"ProductID": row[0], "Product_Name": row[1], "Quantity": row[2], "ShelfID": row[3]} for row in rows]
+            return inventory
+        except sqlite3.Error as e:
+            print("SQLite error:", e)
+            return []

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <!-- Uncomment the following line to use the stylesheet -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/styles/style.css') }}">
+
+    <script>
+        var inventoryManagementShelfViewUrl = "{{ url_for('inventory_management') }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/go_to_product_view.js') }}"></script>
+
+</head>
+
+<body>
+    <header>
+        <!-- ALPHA Store on the left -->
+        <div class="left">
+            ALPHA Store - {{ title }}
+        </div>
+        <!-- Username and Logout button on the right -->
+        <div class="right">
+            <span class="username" id="username">{{ username }}</span>
+            <a href="{{ url_for('home') }}">
+                <button class="logout-button">Home</button>
+            </a>
+        </div>
+    </header>
+    <br>
+    <main>
+        <div class="left-section">
+            <a href={{ url_for('receive_order') }}>
+                <button type="button">Receive Order</button>
+            </a>
+            <a href={{ url_for('add_shelf') }}>
+                <button type="button">Add Shelf</button>
+            </a>
+        </div>
+        <!-- Right section -->
+        <div class="right-section">
+            <form class="search-menu" method="post">
+                <div class="search-flex">
+                    <div class="search-section">
+                        <span style="white-space: nowrap;">View By:</span>
+                        <input type="radio" id="viewByProducts" name="viewBy" value="products">
+                        <label for="viewByProducts">Products</label>
+                        <input type="radio" id="viewByShelves" name="viewBy" value="shelves" checked>
+                        <label for="viewByShelves">Shelves</label>
+                    </div>
+                </div>
+                <div class="search-flex">
+                    <div class="search-section">
+                        <input type="text" id="search" name="search" placeholder="Search">
+                        <input type="submit" value="Search">
+                    </div>
+                </div>
+            </form>
+            <div class="table-section">
+                {% if shelves %}
+                <table class="shelf-table">
+                    <thead>
+                        <tr>
+                            <th>ShelfID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Add rows of data here -->
+                        {% for shelf in shelves %}
+                        <tr data-shelf-id="{{ shelf.ShelfID }}" onclick="selectRow(this)">
+                            <td>
+                                <a href="{{ url_for('inventory_management_shelf', shelf_id=shelf.ShelfID) }}">{{ shelf.ShelfID }}</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <h1>No Data Found</h1>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

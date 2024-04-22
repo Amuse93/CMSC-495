@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <!-- Uncomment the following line to use the stylesheet -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/styles/style.css') }}">
+    
+    <script src="{{ url_for('static', filename='js/inventory_management_script.js') }}"></script>
+    <script>
+        var inventoryManagementShelfViewUrl = "{{ url_for('inventory_management_shelf_view') }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/go_to_shelf_view.js') }}"></script>
+
+
+</head>
+
+<body>
+
+    <header>
+        <!-- ALPHA Store on the left -->
+
+        <div class="left">
+        <a href={{ url_for('inventory_management_shelf_view') }}><button type="button" class="back_button">Back</button></a>
+            ALPHA Store - {{ title }} for ShelfID: {{ shelf_id }}
+        </div>
+        
+        <!-- Username and Logout button on the right -->
+        <div class="right">
+            <span class="username" id="username">{{ username }}</span>
+            <a href="{{ url_for('home') }}">
+                <button class="logout-button">Home</button>
+            </a>
+        </div>
+    </header>
+
+    <br>
+
+    <main>
+        <div class="left-section">
+            <a href={{ url_for('receive_order') }} style="display: block;">
+                <button type="button">Receive Order</button>
+            </a>
+            <a id="stock-btn" href="#" style="display: none;">
+                <button type="button">Stock Product</button>
+            </a>
+            <a id="move-product-btn" href="#" style="display: none;">
+                <button type="button">Move Product</button>
+            </a>
+            <a id="report-waste-btn" href="#" style="display: none;">
+                <button type="button">Report Waste</button>
+            </a>
+            <a href={{ url_for('add_shelf') }} style="display: block;">
+                <button type="button">Add Shelf</button>
+            </a>
+            <a href={{ url_for('delete_shelf', shelf_id=shelf_id) }} style="display: block;">
+                <button type="button">Delete Shelf</button>
+            </a>
+            <a href={{ url_for('add_product_to_shelf') }} style="display: block;">
+                <button type="button">Add Product</button>
+            </a>
+            <a id="delete-product-btn" href="#" style="display: none;">
+                <button type="button">Delete Product</button>
+            </a>
+
+        </div>
+
+        <!-- Right section -->
+        <div class="right-section">
+            <form class="search-menu" method="post">
+                <div class="search-flex">
+                    <div class="search-section">
+                        <input type="text" id="search" name="search" placeholder="Search">
+                        <input type="submit" value="Search">
+                    </div>
+                    <div class="search-section">
+                        <label for="search_by">Search By:</label>
+                        <select id="search_by" name="search_by">
+                            <option value="ProductID" {% if field == "ProductID" %} selected {% endif %}>ProductID</option>
+                            <option value="Product_Name" {% if field == "Product_Name" %} selected {% endif %}>Product_Name</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+            <div class="table-section">
+            {% if products %}
+    <table class="shelf-product-table">
+        <thead>
+            <tr>
+                <th>ProductID</th>
+                <th>Product Name</th>
+                <th>Quantity</th>
+                <th>ShelfID</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Add rows of data here -->
+
+            {% for product in products %}
+                <tr data-product-id="{{ product.ProductID }}" data-shelf-id="{{ product.ShelfID }}" onclick="selectRow(this)">
+                    <td>{{ product.ProductID }}</td>
+                    <td>{{ product.Product_Name }}</td>
+                    <td class="number-value">{{ product.Quantity }}</td>
+                    <td>{{ product.ShelfID }}</td>
+                </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+    {% else %}
+    <h1>No Data Found</h1>
+    {% endif %}
+</div>
+            </div>
+        </div>
+    </main>
+
+</body>
+
+</html>
