@@ -218,7 +218,7 @@ class UserManagement:
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
-        query = f"SELECT COUNT(*) FROM User WHERE {field} = ?"
+        query = f"SELECT COUNT(*) FROM Users WHERE {field} = ?"
 
         # Check if the username exists
         cursor.execute(query, (param,))
