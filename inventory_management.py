@@ -11,7 +11,7 @@ class InventoryManagement:
     def add_shelf(self, shelf):
         """Function will add a new shelf to the inventory"""
 
-        shelf_exists = self.check_shelf_exists(shelf)
+        shelf_exists = self.check_shelf_exists(shelf[0])
 
         # Check if the shelf already exists
         if shelf_exists != 0:
