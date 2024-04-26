@@ -1,5 +1,17 @@
 import sqlite3
+from datetime import datetime
+
 from inventory_cache import InventoryCache
+
+
+def get_report_number():
+    now = datetime.now()
+    formatted_datetime = now.strftime('%Y%m%d%H%M%S')
+    nanoseconds = now.strftime('%f')
+    nanoseconds = int(nanoseconds) * 1000
+
+    result = 'WR-' + formatted_datetime + f"{nanoseconds:09d}"
+    return result
 
 
 class InventoryManagement:
@@ -227,14 +239,23 @@ class InventoryManagement:
 
     def report_waste(self, waste_info):
         """ Produces a waste report and updates inventory and product information """
-        report_number = waste_info[0]
-        product_id = waste_info[1]
-        shelf_id = waste_info[2]
-        quantity = waste_info[3]
-        reason_code = waste_info[4]
-        description = waste_info[5]
-        employee_id = waste_info[6]
-        date = waste_info[7]
+        report_number = get_report_number()
+        product_id = waste_info[0]
+        shelf_id = waste_info[1]
+        quantity = waste_info[2]
+        reason_code = waste_info[3]
+        description = waste_info[4]
+        employee_id = waste_info[5]
+        date = waste_info[6]
+
+        conn = sqlite3.connect(self.db_name)
+        c = conn.cursor()
+
+        # Ensure employee exists
+        query = f"SELECT Price FROM Products WHERE ProductID = '{product_id}'"
+        c.execute(query)
+        unit_price = c.fetchone()
+        conn.close()
 
         if not self.check_product_exists(product_id):
             return 1
@@ -252,8 +273,8 @@ class InventoryManagement:
             return 2
 
         # Create waste report
-        queryTwo = "INSERT INTO Waste_Reports VALUES (?,?,?,?,?,?,?)"
-        paramTwo = (report_number, product_id, quantity, reason_code, date, description, employee_id)
+        queryTwo = "INSERT INTO Waste_Reports VALUES (?,?,?,?,?,?,?,?)"
+        paramTwo = (report_number, product_id, quantity, unit_price, reason_code, date, description, employee_id)
         self.access_db(queryTwo, paramTwo)
 
         # Update inventory information

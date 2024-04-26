@@ -432,10 +432,9 @@ def configure_routes(app):
         code = get_inventory_management_form('report_waste', data)
 
         if request.method == 'POST':
-            report_number = get_report_number()
             now = datetime.now()
             formatted_datetime = now.strftime('%Y-%m-%d')
-            report = [report_number, product_id, shelf_id, request.form.get('quantity'), request.form.get('reason'),
+            report = [product_id, shelf_id, request.form.get('quantity'), request.form.get('reason'),
                       request.form.get('description'), session.get('EmployeeID'), formatted_datetime]
 
             inventory_management_system.report_waste(report)
@@ -1304,16 +1303,6 @@ def get_user_management_form(form_type, data):
                       )
 
         return reset_user
-
-
-def get_report_number():
-    now = datetime.now()
-    formatted_datetime = now.strftime('%Y%m%d%H%M%S')
-    nanoseconds = now.strftime('%f')
-    nanoseconds = int(nanoseconds) * 1000
-
-    result = 'WR-' + formatted_datetime + f"{nanoseconds:09d}"
-    return result
 
 
 # Press the green button in the gutter to run the script.

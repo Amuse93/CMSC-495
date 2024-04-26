@@ -49,6 +49,7 @@ CREATE TABLE Sales_Products (
     SaleID varchar NOT NULL,
     ProductID varchar NOT NULL,
     Product_Quantity int NOT NULL,
+    Unit_Price float NOT NULL,
     PRIMARY KEY (SaleID, ProductID),
     FOREIGN KEY (SaleID) REFERENCES Sales(SaleID),
     FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
@@ -59,6 +60,7 @@ CREATE TABLE Waste_Reports (
     Report_Number varchar NOT NULL,
     ProductID varchar NOT NULL,
     Quantity int NOT NULL,
+    Unit_Price float NOT NULL,
     ReasonCode int NOT NULL,
     Date date NOT NULL,
     Description varchar(255),
