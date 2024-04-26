@@ -136,7 +136,6 @@ class ReportGenerator:
                 f"SELECT Shelf_Product.ProductID, Product.Product_Name, Shelf_Product.Quantity, Shelf_Product.ShelfID "
                 f"FROM Shelf_Product "
                 f"JOIN Product ON Shelf_Product.ProductID = Product.ProductID "
-                f"GROUP BY Shelf_Product.ProductID"
                 f"ORDER BY Shelf_Product.ShelfID;")
 
         # Execute the query
