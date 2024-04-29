@@ -1,25 +1,18 @@
 # Alpha Store Management System
-import json
 import sqlite3
 import os
 import secrets
-# import getpass
 import re
 from datetime import datetime
-
-# from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from passlib.hash import sha256_crypt
-
+from checkout import Checkout
 from inventory_management import InventoryManagement
 from product_management import ProductManagement
-# from product_cache import ProductCache
+from report_generator import ReportGenerator
 from user_management import UserManagement
 
-# Global Password for emails
-server = None
-organizational_email = None
-email_password = None
+# Global variables
 db_name = 'alpha_store.sqlite3'
 sql_file = 'static/Create_tables.sql'
 
@@ -29,6 +22,8 @@ def configure_routes(app):
     user_management_system = UserManagement(db_name)
     product_management_system = ProductManagement(db_name)
     inventory_management_system = InventoryManagement(db_name)
+    checkout_system = Checkout(db_name)
+    report_generation_system = ReportGenerator(db_name)
 
     # General Section
     # Index (Login) page
@@ -94,15 +89,35 @@ def configure_routes(app):
 
     #######################################################################
     # Checkout Section
-    @app.route('/checkout')
+    @app.route('/checkout', methods=['GET', 'POST'])
     def checkout():
-        # if ((session.get('Position') != 'Cashier') or (session.get('Position') != 'Cashier/Warehouseman')
-        # or (session.get('Position') != 'Manager')):
-        #   return redirect(url_for('home'))
+        if ((session.get('Position') != 'Cashier') and (session.get('Position') != 'Cashier/Warehouseman')
+                and (session.get('Position') != 'Manager')):
+            return redirect(url_for('home'))
         title = 'Checkout'
-        code = '<h1>Checkout</h1>'
-        return render_template('form_template.html',
-                               username=session.get('Username'), title=title, code=code)
+        products_list = product_management_system.list_products()  # Use a different variable name
+
+        return render_template('checkout.html', username=session.get('Username'), title=title,
+                               products=products_list)
+
+    @app.route('/finalize_checkout', methods=['POST'])
+    def finalize_checkout():
+        title = 'Finalize Checkout'
+        data = request.json
+        cart_list = data.get('orderData')
+        total = data.get('salesTotal')
+        email = data.get('email')
+
+        if request.method == 'POST':
+            checkout_system.checkout(cart_list, total, email, session.get('EmployeeID'))
+            code = (f'<h1>Finalize Checkout</h1><br>'
+                    f'<h3>Order has been Completed and the receipt sent to customer.</h3><br>'
+                    f'<a href="{url_for("checkout")}">'
+                    f'<input class="selection_button" type="button" value="OK">'
+                    f'</a>')
+
+            return render_template('form_template.html',
+                                   username=session.get('Username'), title=title, code=code)
 
     #######################################################################
     # Inventory Management Section
@@ -312,16 +327,16 @@ def configure_routes(app):
         title = 'Receive Order'
         products_list = product_management_system.list_products()  # Use a different variable name
 
-        if request.method == 'POST':
-
-            code = (f'<h1>Receive Order</h1><br>'
-                    f'<h3>The order was received successfully.</h3><br>'
-                    f'<a href="{url_for("inventory_management")}">'
-                    f'<input class="selection_button" type="button" value="OK">'
-                    f'</a>')
-
-            return render_template('form_template.html',
-                                   username=session.get('Username'), title=title, code=code)
+        # if request.method == 'POST':
+        #
+        #     code = (f'<h1>Receive Order</h1><br>'
+        #             f'<h3>The order was received successfully.</h3><br>'
+        #             f'<a href="{url_for("inventory_management")}">'
+        #             f'<input class="selection_button" type="button" value="OK">'
+        #             f'</a>')
+        #
+        #     return render_template('form_template.html',
+        #                            username=session.get('Username'), title=title, code=code)
 
         return render_template('receive_order.html', username=session.get('Username'), title=title,
                                products=products_list)
@@ -755,10 +770,116 @@ def configure_routes(app):
     # Report Generation Section
     @app.route('/report_generation')
     def report_generation():
-        # if session.get('Position') != 'Manager':
-        #   return redirect(url_for('home'))
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
         title = 'Report Generation'
-        code = '<h1>Report Generation</h1>'
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_report_generator_form('report_main', data)
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    @app.route('/report_generation/inventory_report')
+    def inventory_report():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Inventory Report'
+        data = []
+        code = get_report_generator_form('inventory_report', data)
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    @app.route('/report_generation/inventory_report/total_inventory')
+    def total_inventory_report():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+
+        report_info = {'Report_Type': 'Inventory', 'EmployeeID': session.get('EmployeeID'), 'Scope': 'Total_Inventory'}
+
+        report_generation_system.inventory_report(report_info)
+
+        return redirect(url_for('report_generation'))
+
+    @app.route('/report_generation/inventory_report/shelf_inventory')
+    def shelf_inventory_report():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+
+        report_info = {'Report_Type': 'Inventory', 'EmployeeID': session.get('EmployeeID'), 'Scope': 'Shelf_Inventory'}
+
+        report_generation_system.generate_report(report_info)
+
+        return redirect(url_for('report_generation'))
+
+    @app.route('/report_generation/sales_report', methods=['GET', 'POST'])
+    def sales_report():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Sales Report'
+        report_info = {}
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_report_generator_form('sales_report', data)
+
+        if request.method == 'POST':
+            report_info['Report_Type'] = 'Sales'
+            report_info['EmployeeID'] = session.get('EmployeeID')
+            report_info['Scope'] = request.form.get('scope')
+            report_info['ProductID'] = request.form.get('product_id')
+            report_info['Metric'] = request.form.get('metric')
+            report_info['Period'] = request.form.get('period')
+            report_info['From_Date'] = request.form.get('from_date')
+            report_info['To_Date'] = request.form.get('to_date')
+
+            error = report_generation_system.generate_report(report_info)
+
+            if error == 0:
+                return redirect(url_for('report_generation'))
+            elif error == 2:
+                message = f'<h4>Invalid Report Type!</h4>'
+                data["Message"] = message
+            elif error == 3:
+                message = f'<h4>The product with the ProductID {request.form.get('product_id')} does not exist!</h4>'
+                data["Message"] = message
+
+        return render_template('form_template.html',
+                               username=session.get('Username'), title=title, code=code)
+
+    @app.route('/report_generation/waste_report', methods=['GET', 'POST'])
+    def waste_report():
+        if session.get('Position') != 'Manager':
+            return redirect(url_for('home'))
+        title = 'Waste Report'
+        report_info = {}
+        data = {}
+        message = ''
+        data["Message"] = message
+        code = get_report_generator_form('waste_report', data)
+
+        if request.method == 'POST':
+            report_info['Report_Type'] = 'Waste'
+            report_info['EmployeeID'] = session.get('EmployeeID')
+            report_info['Scope'] = request.form.get('scope')
+            report_info['ProductID'] = request.form.get('product_id')
+            report_info['Metric'] = request.form.get('metric')
+            report_info['ReasonCode'] = request.form.get('reason')
+            report_info['Period'] = request.form.get('period')
+            report_info['From_Date'] = request.form.get('from_date')
+            report_info['To_Date'] = request.form.get('to_date')
+
+            error = report_generation_system.generate_report(report_info)
+
+            if error == 0:
+                return redirect(url_for('report_generation'))
+            elif error == 2:
+                message = f'<h4>Invalid Report Type!</h4>'
+                data["Message"] = message
+            elif error == 3:
+                message = f'<h4>The product with the ProductID {request.form.get('product_id')} does not exist!</h4>'
+                data["Message"] = message
+
         return render_template('form_template.html',
                                username=session.get('Username'), title=title, code=code)
 
@@ -989,22 +1110,22 @@ def get_inventory_management_form(form_type, data):
         return delete_product_from_shelf
 
     if form_type == 'move_product':
-        move_product =(f'<h1>Move Product {data.get('ProductID')} From Shelf {data.get('ShelfID')} To:</h1>'
-                       f'{data.get("Message")}'
-                       f'<form action="{url_for('move_product', 
-                                                product_id=data.get('ProductID'), 
-                                                shelf_id=data.get('ShelfID'))}" '
-                       f'id="move_product" method="post">'
-                       f'<label for="to_shelf_id">ShelfID: </label>'
-                       f'<input type="text" id="to_shelf_id" name="to_shelf_id" size="25" autocomplete="off" required>'
-                       f'<br>'
-                       f'<br>'
-                       f'<br>'
-                       f'<div>'
-                       f'<input class="selection_button" type="submit" value="OK">'
-                       f'<a href="{url_for('inventory_management_shelf_view')}">'
-                       f'<input class="selection_button" type="button" value="Cancel">'
-                       )
+        move_product = (f'<h1>Move Product {data.get('ProductID')} From Shelf {data.get('ShelfID')} To:</h1>'
+                        f'{data.get("Message")}'
+                        f'<form action="{url_for('move_product', 
+                                                 product_id=data.get('ProductID'), 
+                                                 shelf_id=data.get('ShelfID'))}" '
+                        f'id="move_product" method="post">'
+                        f'<label for="to_shelf_id">ShelfID: </label>'
+                        f'<input type="text" id="to_shelf_id" name="to_shelf_id" size="25" autocomplete="off" required>'
+                        f'<br>'
+                        f'<br>'
+                        f'<br>'
+                        f'<div>'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'<a href="{url_for('inventory_management_shelf_view')}">'
+                        f'<input class="selection_button" type="button" value="Cancel">'
+                        )
 
         return move_product
 
@@ -1055,6 +1176,7 @@ def get_inventory_management_form(form_type, data):
                         f'<input class="selection_button" type="submit" value="OK">'
                         f'<a href="{url_for('inventory_management_shelf_view')}">'
                         f'<input class="selection_button" type="button" value="Cancel">'
+                        f'</form>'
                         )
 
         return report_waste
@@ -1070,7 +1192,8 @@ def get_product_management_form(form_type, data):
                        f'<br>'
                        f'<br>'
                        f'<label for="product_name">Product_Name: </label>'
-                       f'<input type="text" id="product_name" name="product_name" size="25" autocomplete="off" required>'
+                       f'<input type="text" id="product_name" name="product_name" size="25" '
+                       f'autocomplete="off" required>'
                        f'<br>'
                        f'<br>'
                        f'<label for="price">Price: </label>'
@@ -1305,7 +1428,162 @@ def get_user_management_form(form_type, data):
         return reset_user
 
 
-# Press the green button in the gutter to run the script.
+def get_report_generator_form(form_type, data):
+    script = '''
+    <script>
+        const scopeSelect = document.getElementById("scope");
+        const productIDDiv = document.querySelector('.product_id_input');
+        // Function to toggle visibility of ProductID input div based on Scope selection
+        function toggleProductIDInput() {
+            if (scopeSelect.value === "Individual_Product") {
+                productIDDiv.style.display = "block";  // Show ProductID input div
+                document.getElementById("product_id").required = true;  // Make input required
+            } else {
+                productIDDiv.style.display = "none";  // Hide ProductID input div
+                document.getElementById("product_id").value = "";  // Clear input value
+                document.getElementById("product_id").required = false;  // Make input optional
+            }
+        }
+
+        // Add event listener to Scope dropdown to trigger visibility toggle
+        scopeSelect.addEventListener("change", toggleProductIDInput);
+
+        // Initial call to set initial visibility based on initial Scope value
+        toggleProductIDInput();
+    </script>
+    '''
+
+    if form_type == 'report_main':
+        report_main = (f'<h1>Select a Report</h1>'
+                       f'<a href="{url_for('inventory_report')}"><button>Inventory</button></a>'
+                       f'<a href="{url_for('sales_report')}"><button>Sales</button></a>'
+                       f'<a href="{url_for('waste_report')}"><button>Waste</button></a>'
+                       )
+        return report_main
+
+    if form_type == 'inventory_report':
+        inventory_report = (f'<h1>Select a Scope</h1>'
+                            f'<a href="{url_for('total_inventory_report')}">'
+                            f'<button>Total Inventory On Hand</button>'
+                            f'</a>'
+                            f'<a href="{url_for('shelf_inventory_report')}">'
+                            f'<button>Shelf Inventory</button>'
+                            f'</a>'
+                            f'<a href="{url_for('report_generation')}">'
+                            f'<input class="selection_button" type="button" value="Cancel">'
+                            f'</a>'
+                            )
+        return inventory_report
+
+    if form_type == 'sales_report':
+        sales_report = (f'<h1>Sales Report</h1>'
+                        f'{data.get("Message")}'
+                        f'<form action="{url_for('sales_report')}" id="sales_report" method="post">' 
+                        f'<label for="scope">Scope: </label>'
+                        f'<select id="scope" name="scope" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Total">Total</option>'
+                        f'<option value = "Individual_Product">Individual Product</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<div class="product_id_input" style="display: none;">'
+                        f'<label for="product_id">ProductID: </label>'
+                        f'<input type="text" id="product_id" name="product_id" size="25" autocomplete="off">'
+                        f'<br><br>'
+                        f'</div>'
+                        f'<label for="metric">Metric: </label>'
+                        f'<select id="metric" name="metric" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Quantity">Quantity</option>'
+                        f'<option value = "Dollar_Amount">Dollar Amount</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<label for="period">Period: </label>'
+                        f'<select id="period" name="period" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Yearly">Yearly</option>'
+                        f'<option value = "Monthly">Monthly</option>'
+                        f'<option value = "Weekly">Weekly</option>'
+                        f'<option value = "Daily">Daily</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<label for="from_date">From_Date: </label>'
+                        f'<input type="date" id="from_date" name="from_date" size="25" autocomplete="off" required>'
+                        f'<br><br>'
+                        f'<label for="to_date">To Date: </label>'
+                        f'<input type="date" id="to_date" name="to_date" size="25" autocomplete="off" required>'
+                        f'<br><br><br>'
+                        f'<div>'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'<a href="{url_for('report_generation')}">'
+                        f'<input class="selection_button" type="button" value="Cancel">'
+                        f'</a>'
+                        f'</div>'
+                        f'</form>'
+                        f'{script}'
+                        )
+        return sales_report
+
+    if form_type == 'waste_report':
+        waste_report = (f'<h1>Waste Report</h1>'
+                        f'{data.get("Message")}'
+                        f'<form action="{url_for('waste_report')}" id="waste_report" method="post">' 
+                        f'<label for="scope">Scope: </label>'
+                        f'<select id="scope" name="scope" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Total">Total</option>'
+                        f'<option value = "Individual_Product">Individual Product</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<div class="product_id_input" style="display:none;">'
+                        f'<label for="product_id">ProductID: </label>'
+                        f'<input type="text" id="product_id" name="product_id" size="25" autocomplete="off">'
+                        f'<br><br>'
+                        f'</div>'
+                        f'<label for="metric">Metric: </label>'
+                        f'<select id="metric" name="metric" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Quantity">Quantity</option>'
+                        f'<option value = "Dollar_Amount">Dollar Amount</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<label for="reason">Reason: </label>'
+                        f'<select id="reason" name="reason" required>'
+                        f'<option value = "All" selected>All</option>'
+                        f'<option value = "Expired">Expired</option>'
+                        f'<option value = "Damaged">Damaged</option>'
+                        f'<option value = "Stolen">Stolen</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<label for="period">Period: </label>'
+                        f'<select id="period" name="period" required>'
+                        f'<option disabled selected>-- Make Selection --</option>'
+                        f'<option value = "Yearly">Yearly</option>'
+                        f'<option value = "Monthly">Monthly</option>'
+                        f'<option value = "Weekly">Weekly</option>'
+                        f'<option value = "Daily">Daily</option>'
+                        f'</select>'
+                        f'<br><br>'
+                        f'<label for="from_date">From_Date: </label>'
+                        f'<input type="date" id="from_date" name="from_date" size="25" autocomplete="off" required>'
+                        f'<br><br>'
+                        f'<label for="to_date">To Date: </label>'
+                        f'<input type="date" id="to_date" name="to_date" size="25" autocomplete="off" required>'
+                        f'<br><br><br>'
+                        f'<div>'
+                        f'<input class="selection_button" type="submit" value="OK">'
+                        f'<a href="{url_for('report_generation')}">'
+                        f'<input class="selection_button" type="button" value="Cancel">'
+                        f'</a>'
+                        f'</div>'
+                        f'</form>'
+                        f'{script}'
+                        )
+        return waste_report
+
+    return 0
+
+
 if __name__ == '__main__':
     # Prompt System Administrator for the organization's email server, email, and password
     # global server

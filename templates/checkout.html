@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <!-- Uncomment the following line to use the stylesheet -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/styles/style.css') }}">
+    <script>
+        // Define a JavaScript variable and assign the products dictionary as JSON
+        const products = {{ products | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/checkout_script.js') }}"></script>
+</head>
+
+<body>
+
+    <header>
+        <!-- ALPHA Store on the left -->
+        <div class="left">
+            ALPHA Store - {{ title }}
+        </div>
+        
+        <!-- Username and Logout button on the right -->
+        <div class="right">
+            <span class="username" id="username">{{ username }}</span>
+            <a href="{{ url_for('home') }}">
+                <button class="logout-button">Home</button>
+            </a>
+        </div>
+    </header>
+
+    <br>
+
+    <main>
+<form method="post" style="display: flex;">
+    <input type="hidden" id="salesTotalInput" name="sales_total">
+    <input type="hidden" id="emailInput" name="email">
+        <div class="left-section" style="width: 150px;">
+            
+                <label for="product_id">ProductID:</label>
+                <input type="text" id="product_id" name="product_id">
+                <label for="quantity">Quantity:</label>
+                <input type="text" id="quantity" name="quantity" value=1>
+                <button type="button" id="add_btn">Add</button>
+                <br><br>
+                <label for="received">Recieved:</label>
+                <input type="text" id="received_id" name="received_id">
+                <button type="button" id="accept_btn">Accept</button>
+                <br><br>
+                <label for="email">Customer Email:</label>
+                <input type="text" id="email" name="email">
+                <br><br>
+		<label>Submit:</label>
+                <input class="selection_button" type="submit" id="submit_btn" style="margin: 10px 0;" value="OK">
+                <a href="{{ url_for("checkout") }}">
+                <button type="button">Cancel</button>
+                </a>
+
+        </div>
+
+        <!-- Right section -->
+        <div class="right-section">
+            <div class="table-section">
+                <table id="product-table" class="shelf-product-table">
+                    <thead>
+                        <tr>
+                            <th>ProductID</th>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+<div class="summary-section">
+        <div>
+            <label for="sales-total">Sales Total:</label>
+            <span id="sales-total">$0.00</span>
+        </div>
+<br>
+        <div>
+            <label for="change-received">Change Received:</label>
+            <span id="change-received">$0.00</span>
+        </div>
+<br>
+        <div>
+            <label for="change-due">Change Due:</label>
+            <span id="change-due">$0.00</span>
+        </div>
+    </div>
+            </div>
+            
+        </div>
+</form>
+    </main>
+
+</body>
+
+</html>

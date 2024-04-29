@@ -34,11 +34,20 @@ document.addEventListener("DOMContentLoaded", function() {
             <td>${productId}</td>
             <td>${product.Product_Name}</td>
             <td>${quantity}</td>
+            <td><button class="delete-button">Delete</button></td>
         `;
         productTable.appendChild(newRow);
 
         productIdInput.value = "";
         quantityInput.value = "";
+
+        // Add event listener for delete button in the newly created row
+        const deleteBtn = newRow.querySelector('.delete-button');
+        deleteBtn.addEventListener('click', function() {
+            const rowIndex = Array.from(productTable.querySelectorAll('tr')).indexOf(newRow);
+            orderData.splice(rowIndex, 1); // Remove the corresponding data from orderData array
+            newRow.remove(); // Remove the row from the table
+        });
     });
 
     submitBtn.addEventListener("click", function(event) {

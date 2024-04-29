@@ -75,12 +75,12 @@ def generate_pdf_receipt(receipt_number, sales_date, cart_list, total):
     elements.append(Paragraph(header_text, styles['Heading1']))
 
     # Table of items
-    data = [["Product", "Quantity", "Price"]]
+    data = [["Product", "Quantity", "Unit_Price"]]
     for product in cart_list:
         product_name = product.get('Product_Name')
         quantity = product.get('Quantity')
-        unit_price = product.get('Price')
-        total_price = quantity * unit_price
+        unit_price = product.get('Unit_Price')
+        total_price = float(quantity) * unit_price
         data.append([product_name, str(quantity), f"${total_price:.2f}"])
 
     table = Table(data)
@@ -106,8 +106,7 @@ def generate_pdf_receipt(receipt_number, sales_date, cart_list, total):
 
 class Checkout:
 
-    def __init__(self, cart, db_name):
-        self.cart = cart
+    def __init__(self, db_name):
         self.db_name = db_name
 
     def checkout(self, cart_list, total, email, employee_id):
@@ -117,18 +116,27 @@ class Checkout:
         formatted_date = sales_date.strftime("%Y-%m-%d")
         formatted_date_email = sales_date.strftime("%Y/%m/%d %I:%M %p")
 
+        queryTwo = "INSERT INTO Sales VALUES (?, ?, ?, ?)"
+        paramsTwo = (receipt_number, employee_id, total, formatted_date)
+        self.access_db(queryTwo, paramsTwo)
+
         for product in cart_list:
             product_id = product.get('ProductID')
             quantity = product.get('Quantity')
-            unit_price = product.get('Price')
+            unit_price = product.get('Unit_Price')
 
             query = "INSERT INTO Sales_Products VALUES (?, ?, ?, ?)"
             params = (receipt_number, product_id, quantity, unit_price)
             self.access_db(query, params)
 
-        queryTwo = "INSERT INTO Sales VALUES (?, ?, ?, ?)"
-        paramsTwo = (receipt_number, employee_id, total, formatted_date)
-        self.access_db(queryTwo, paramsTwo)
+            query = (f"UPDATE Shelf_Product SET Quantity = Quantity - {quantity} "
+                     f"WHERE ProductID = '{product_id}' AND ShelfID LIKE 'SF%'")
+            self.access_db(query)
+
+            # Update the total amount of the product that is in stock by adding the received quantity to the total
+            query = (f"UPDATE Product SET Total_In_Stock = Total_In_Stock - {quantity} "
+                     f"WHERE ProductID = '{product_id}'")
+            self.access_db(query)
 
         # Generate PDF receipt and get file path
         pdf_file_path = generate_pdf_receipt(receipt_number, formatted_date_email, cart_list, total)
@@ -143,8 +151,8 @@ class Checkout:
         for product in cart_list:
             product_name = product.get('Product_Name')
             quantity = product.get('Quantity')
-            unit_price = product.get('Price')
-            total_price = quantity * unit_price
+            unit_price = product.get('Unit_Price')
+            total_price = float(quantity) * unit_price
 
             # Adjust spacing to align columns
             email_body += f"{product_name.ljust(24)}{str(quantity).ljust(11)}${total_price:.2f}\n"
