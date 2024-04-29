@@ -252,9 +252,9 @@ class InventoryManagement:
         c = conn.cursor()
 
         # Ensure employee exists
-        query = f"SELECT Price FROM Products WHERE ProductID = '{product_id}'"
+        query = f"SELECT Price FROM Product WHERE ProductID = '{product_id}'"
         c.execute(query)
-        unit_price = c.fetchone()
+        unit_price = c.fetchone()[0]
         conn.close()
 
         if not self.check_product_exists(product_id):
@@ -274,7 +274,7 @@ class InventoryManagement:
 
         # Create waste report
         queryTwo = "INSERT INTO Waste_Reports VALUES (?,?,?,?,?,?,?,?)"
-        paramTwo = (report_number, product_id, quantity, unit_price, reason_code, date, description, employee_id)
+        paramTwo = [report_number, product_id, quantity, unit_price, reason_code, date, description, employee_id]
         self.access_db(queryTwo, paramTwo)
 
         # Update inventory information
