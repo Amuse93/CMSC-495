@@ -1470,7 +1470,7 @@ def get_report_generator_form(form_type, data):
                             f'<button>Shelf Inventory</button>'
                             f'</a>'
                             f'<a href="{url_for('report_generation')}">'
-                            f'<input class="selection_button" type="button" value="Cancel">'
+                            f'<button>Cancel</button>'
                             f'</a>'
                             )
         return inventory_report
