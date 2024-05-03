@@ -1,15 +1,16 @@
-import sqlite3
 import time
 from threading import Lock
 
+from database_portal import DatabasePortal
+
 
 class InventoryCache:
-    def __init__(self, db_name):
+    def __init__(self):
         self.cache_expiry = 3000  # Cache expiry time in seconds (5 min)
         self.last_cache_update_time = None
         self.cached_shelf_data = None
         self.cached_inventory_data = None
-        self.db_name = db_name
+        self.db_portal = DatabasePortal()
         self.lock = Lock()  # Lock for thread safety
 
     def get_last_cache_update_time(self):
@@ -36,18 +37,10 @@ class InventoryCache:
         return self.cached_shelf_data
 
     def fetch_sorted_shelves(self):
-        try:
-            with sqlite3.connect(self.db_name) as conn:
-                cursor = conn.cursor()
-                query = "SELECT * FROM Shelf ORDER BY ShelfID"
-                cursor.execute(query)
-                rows = cursor.fetchall()
-
-            shelves = [{"ShelfID": row[0]} for row in rows]
-            return shelves
-        except sqlite3.Error as e:
-            print("SQLite error:", e)
-            return []
+        query = "SELECT * FROM Shelf ORDER BY ShelfID"
+        rows = self.db_portal.pull_data(query)
+        shelves = [{"ShelfID": row[0]} for row in rows]
+        return shelves
 
     def get_inventory_data(self):
         current_time = time.time()
@@ -61,20 +54,14 @@ class InventoryCache:
         return self.cached_inventory_data
 
     def fetch_sorted_inventory(self):
-        try:
-            with sqlite3.connect(self.db_name) as conn:
-                cursor = conn.cursor()
-                query = """
-                    SELECT Shelf_Product.ProductID, Product.Product_Name, Shelf_Product.Quantity, Shelf_Product.ShelfID
-                    FROM Shelf_Product
-                    JOIN Product ON Shelf_Product.ProductID = Product.ProductID
-                    ORDER BY Shelf_Product.ShelfID
-                """
-                cursor.execute(query)
-                rows = cursor.fetchall()
+        query = """
+            SELECT Shelf_Product.ProductID, Product.Product_Name, Shelf_Product.Quantity, Shelf_Product.ShelfID
+            FROM Shelf_Product
+            JOIN Product ON Shelf_Product.ProductID = Product.ProductID
+            ORDER BY Shelf_Product.ShelfID
+        """
 
-            inventory = [{"ProductID": row[0], "Product_Name": row[1], "Quantity": row[2], "ShelfID": row[3]} for row in rows]
-            return inventory
-        except sqlite3.Error as e:
-            print("SQLite error:", e)
-            return []
+        rows = self.db_portal.pull_data(query)
+        inventory = [{"ProductID": row[0], "Product_Name": row[1], "Quantity": row[2],
+                      "ShelfID": row[3]} for row in rows]
+        return inventory

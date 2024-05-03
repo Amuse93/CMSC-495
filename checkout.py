@@ -1,15 +1,14 @@
-import sqlite3
 import os
 import tempfile
 from datetime import datetime
 import ssl
 from email.message import EmailMessage
 import smtplib
-
-import io
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
+
+from database_portal import DatabasePortal
 
 
 def generate_receipt_number():
@@ -106,8 +105,8 @@ def generate_pdf_receipt(receipt_number, sales_date, cart_list, total):
 
 class Checkout:
 
-    def __init__(self, db_name):
-        self.db_name = db_name
+    def __init__(self):
+        self.db_portal = DatabasePortal()
 
     def checkout(self, cart_list, total, email, employee_id):
 
@@ -116,27 +115,29 @@ class Checkout:
         formatted_date = sales_date.strftime("%Y-%m-%d")
         formatted_date_email = sales_date.strftime("%Y/%m/%d %I:%M %p")
 
-        queryTwo = "INSERT INTO Sales VALUES (?, ?, ?, ?)"
-        paramsTwo = (receipt_number, employee_id, total, formatted_date)
-        self.access_db(queryTwo, paramsTwo)
+        script = "INSERT INTO Sales VALUES (?, ?, ?, ?)"
+        param = (receipt_number, employee_id, total, formatted_date)
+        self.db_portal.push_data(script, param)
 
         for product in cart_list:
             product_id = product.get('ProductID')
             quantity = product.get('Quantity')
             unit_price = product.get('Unit_Price')
 
-            query = "INSERT INTO Sales_Products VALUES (?, ?, ?, ?)"
-            params = (receipt_number, product_id, quantity, unit_price)
-            self.access_db(query, params)
+            script = "INSERT INTO Sales_Products VALUES (?, ?, ?, ?)"
+            param = (receipt_number, product_id, quantity, unit_price)
+            self.db_portal.push_data(script, param)
 
-            query = (f"UPDATE Shelf_Product SET Quantity = Quantity - {quantity} "
-                     f"WHERE ProductID = '{product_id}' AND ShelfID LIKE 'SF%'")
-            self.access_db(query)
+            script = (f"UPDATE Shelf_Product SET Quantity = Quantity - ? "
+                      f"WHERE ProductID = ? AND ShelfID LIKE 'SF%';")
+            param = (quantity, product_id)
+            self.db_portal.push_data(script, param)
 
             # Update the total amount of the product that is in stock by adding the received quantity to the total
-            query = (f"UPDATE Product SET Total_In_Stock = Total_In_Stock - {quantity} "
-                     f"WHERE ProductID = '{product_id}'")
-            self.access_db(query)
+            script = (f"UPDATE Product SET Total_In_Stock = Total_In_Stock - ? "
+                      f"WHERE ProductID = ?;")
+            param = (quantity, product_id)
+            self.db_portal.push_data(script, param)
 
         # Generate PDF receipt and get file path
         pdf_file_path = generate_pdf_receipt(receipt_number, formatted_date_email, cart_list, total)
@@ -168,20 +169,3 @@ class Checkout:
         delete_pdf(receipt_number)
 
         return 0
-
-    def access_db(self, script, args=None):
-        """ Allows scripts to be executed for updating the database """
-        # Connect to the database
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
-        # Execute the query with parameters if provided
-        if args:
-            cursor.execute(script, args)
-        else:
-            cursor.execute(script)
-
-        conn.commit()
-
-        # Close the connection
-        conn.close()

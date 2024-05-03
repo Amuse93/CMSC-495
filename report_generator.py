@@ -2,7 +2,6 @@ import os
 import io
 import subprocess
 import time
-import sqlite3
 import pandas as pd
 from datetime import datetime
 from reportlab.lib.enums import TA_CENTER
@@ -12,6 +11,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 import matplotlib.pyplot as plt
+from database_portal import DatabasePortal
+
 plt.switch_backend('agg')
 
 
@@ -27,8 +28,8 @@ def generate_filename():
 
 class ReportGenerator:
     # The UserManagement constructor
-    def __init__(self, db_name):
-        self.db_name = db_name
+    def __init__(self):
+        self.db_portal = DatabasePortal()
 
     def generate_report(self, report_info):
         """ Generate a report. Accepts a dictionary with the following
@@ -69,29 +70,21 @@ class ReportGenerator:
         scope = report_info.get("Scope")
         metric = report_info.get("Metric")
         query = ''
+        param = ()
 
         if scope == 'Total':
             if metric == 'Quantity':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                    SELECT {group_by_sql} AS Period,
-                        SUM(Sales_Products.Product_Quantity) AS Quantity
-                    FROM Sales
-                    JOIN Sales_Products ON Sales.SaleID = Sales_Products.SaleID
-                    WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                    GROUP BY {group_by_sql}
-                    ORDER BY Period
-                    """
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Sales_Products.Product_Quantity) AS Quantity "
+                         f"FROM Sales JOIN Sales_Products ON Sales.SaleID = Sales_Products.SaleID "
+                         f"WHERE Date BETWEEN ? AND ? GROUP BY {group_by_sql} ORDER BY Period;")
+                param = (start_date, end_date)
             elif metric == 'Dollar_Amount':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                   SELECT {group_by_sql} AS Period,
-                          SUM(Total_Price) AS Total_Price
-                   FROM Sales
-                   WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                   GROUP BY {group_by_sql}
-                   ORDER BY Period
-                   """
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Total_Price) AS Total_Price "
+                         f"FROM Sales "
+                         f"WHERE Date BETWEEN ? AND ? GROUP BY {group_by_sql} ORDER BY Period;")
+                param = (start_date, end_date)
         elif scope == 'Individual_Product':
             product_id = report_info.get('ProductID')
 
@@ -101,31 +94,21 @@ class ReportGenerator:
             product_id = report_info.get('ProductID')
             if metric == 'Quantity':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                    SELECT {group_by_sql} AS Period,
-                        SUM(Sales_Products.Product_Quantity) AS Quantity
-                    FROM Sales
-                    JOIN Sales_Products ON Sales.SaleID = Sales_Products.SaleID
-                    WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                    AND ProductID = '{product_id}'
-                    GROUP BY {group_by_sql}
-                    ORDER BY Period
-                    """
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Sales_Products.Product_Quantity) AS Quantity "
+                         f"FROM Sales JOIN Sales_Products ON Sales.SaleID = Sales_Products.SaleID "
+                         f"WHERE Date BETWEEN ? AND ? "
+                         f"AND ProductID = ? GROUP BY {group_by_sql} ORDER BY Period;")
+                param = (start_date, end_date, product_id)
             elif metric == 'Dollar_Amount':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                    SELECT {group_by_sql} AS Period,
-                        SUM(Sales_Products.Product_Quantity * Sales_Products.Unit_Price) AS Total_Price
-                    FROM Sales
-                    JOIN Sales_Products ON Sales.SaleID = Sales_Products.SaleID
-                    WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                    AND ProductID = '{product_id}'
-                    GROUP BY {group_by_sql}
-                    ORDER BY Period
-                    """
+                query = (f"SELECT {group_by_sql} AS Period, "
+                         f"SUM(Sales_Products.Product_Quantity * Sales_Products.Unit_Price) AS Total_Price FROM Sales "
+                         f"JOIN Sales_Products ON Sales.SaleID = Sales_Products.SaleID "
+                         f"WHERE Date BETWEEN ? AND ? AND ProductID = ? GROUP BY {group_by_sql} ORDER BY Period;")
+                param = (start_date, end_date, product_id)
 
         # Execute the query
-        rows = self.get_table_data(query)
+        rows = self.db_portal.pull_data(query, param)
         periods = []
         amounts = []
 
@@ -150,7 +133,7 @@ class ReportGenerator:
                      'FROM Product ORDER BY ProductID')
 
             # Execute the query
-            rows = self.get_table_data(query)
+            rows = self.db_portal.pull_data(query)
             product_ids = []
             product_names = []
             total_in_stock = []
@@ -174,7 +157,7 @@ class ReportGenerator:
                 f"ORDER BY Shelf_Product.ShelfID;")
 
             # Execute the query
-            rows = self.get_table_data(query)
+            rows = self.db_portal.pull_data(query)
             product_ids = []
             product_names = []
             quantities = []
@@ -220,34 +203,24 @@ class ReportGenerator:
         reason_code = report_info.get('ReasonCode')
         reason = ''
         query = ''
+        param = ()
 
         if reason_code != 'All':
-            reason = f"AND ReasonCode = '{reason_code}' "
+            reason = f"AND ReasonCode = '{reason_code}'"
 
         if scope == 'Total':
             if metric == 'Quantity':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                    SELECT {group_by_sql} AS Period,
-                        SUM(Quantity) AS Quantity
-                    FROM Waste_Reports
-                    WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                    {reason}
-                    GROUP BY {group_by_sql}
-                    ORDER BY Period
-                    """
-            elif metric == 'Dollar Amount':
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Quantity) AS Quantity FROM Waste_Reports "
+                         f"WHERE Date BETWEEN ? AND ? {reason} GROUP BY {group_by_sql} ORDER BY Period")
+                param = (start_date, end_date)
+            elif metric == 'Dollar_Amount':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                   SELECT {group_by_sql} AS Period,
-                          SUM(Quantity * Unit_Price) AS Total_Price
-                   FROM Waste_Reports
-                   WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                   {reason}
-                   GROUP BY {group_by_sql}
-                   ORDER BY Period
-                   """
-        elif scope == 'Individual Product':
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Quantity * Unit_Price) AS Total_Price "
+                         f"FROM Waste_Reports "
+                         f"WHERE Date BETWEEN ? AND ? {reason} GROUP BY {group_by_sql} ORDER BY Period")
+                param = (start_date, end_date)
+        elif scope == 'Individual_Product':
             product_id = report_info.get('ProductID')
 
             if not self.check_product_exists(product_id):
@@ -255,31 +228,20 @@ class ReportGenerator:
 
             if metric == 'Quantity':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                    SELECT {group_by_sql} AS Period,
-                        SUM(Quantity) AS Quantity
-                    FROM FROM Waste_Reports
-                    WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                    AND ProductID = '{product_id}'
-                    {reason}
-                    GROUP BY {group_by_sql}
-                    ORDER BY Period
-                    """
-            elif metric == 'Dollar Amount':
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Quantity) AS Quantity FROM Waste_Reports "
+                         f"WHERE Date BETWEEN ? AND ? "
+                         f"AND ProductID = ? {reason} GROUP BY {group_by_sql} ORDER BY Period;")
+                param = (start_date, end_date, product_id)
+            elif metric == 'Dollar_Amount':
                 # Construct the SQL query to retrieve total price grouped by time interval
-                query = f"""
-                   SELECT {group_by_sql} AS Period,
-                          SUM(Quantity * Unit_Price) AS Total_Price
-                   FROM FROM Waste_Reports
-                   WHERE Date BETWEEN '{start_date}' AND '{end_date}'
-                   AND ProductID = '{product_id}'
-                   {reason}
-                   GROUP BY {group_by_sql}
-                   ORDER BY Period
-                   """
+                query = (f"SELECT {group_by_sql} AS Period, SUM(Quantity * Unit_Price) AS Total_Price "
+                         f"FROM Waste_Reports "
+                         f"WHERE Date BETWEEN ? AND ? "
+                         f"AND ProductID = ? {reason} GROUP BY {group_by_sql} ORDER BY Period;")
+                param = (start_date, end_date, product_id)
 
         # Execute the query
-        rows = self.get_table_data(query)
+        rows = self.db_portal.pull_data(query, param)
         periods = []
         amounts = []
 
@@ -334,15 +296,13 @@ class ReportGenerator:
         temp_path = os.path.join(directory, 'test.pdf')
 
         # Fetch employee's first and last name from the database
-        query = f"SELECT First_Name, Last_Name FROM Users WHERE EmployeeID = '{employee_id}';"
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query)
-            result = cursor.fetchone()
-            if result:
-                first_name, last_name = result
-            else:
-                first_name, last_name = "Unknown", "Unknown"
+        query = f"SELECT First_Name, Last_Name FROM Users WHERE EmployeeID = ?;"
+        param = (employee_id,)
+        result = self.db_portal.pull_data(query, param)[0]
+        if result:
+            first_name, last_name = result
+        else:
+            first_name, last_name = "Unknown", "Unknown"
 
         # Create PDF report
         doc = SimpleDocTemplate(full_path, pagesize=letter,
@@ -483,21 +443,11 @@ class ReportGenerator:
 
         return filename
 
-    def check_product_exists(self, product):
-        conn = sqlite3.connect(self.db_name)
-        c = conn.cursor()
-        query = f"SELECT COUNT(*) FROM Product WHERE ProductID = '{product}'"
-        c.execute(query)
-        product_exists = c.fetchone()[0]
-        conn.close()
+    def check_product_exists(self, product_id):
+        query = "SELECT COUNT(*) FROM Product WHERE ProductID = ?"
+        param = (product_id,)
+        product_exists = self.db_portal.pull_data(query, param)[0][0]
 
         if product_exists == 0:
             return False
         return True
-
-    def get_table_data(self, query):
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        return rows

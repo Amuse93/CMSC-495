@@ -1,14 +1,14 @@
-import sqlite3
 import time
 from threading import Lock
+from database_portal import DatabasePortal
 
 
 class ProductCache:
-    def __init__(self, db_name):
+    def __init__(self):
         self.cache_expiry = 3000  # Cache expiry time in seconds (5 min)
         self.last_cache_update_time = None  # Initialize to None
         self.cached_product_data = None
-        self.db_name = db_name
+        self.db_portal = DatabasePortal()
         self.lock = Lock()  # Lock for thread safety
 
     def update_cache(self):
@@ -35,24 +35,16 @@ class ProductCache:
         return self.last_cache_update_time
 
     def fetch_sorted_products(self):
-        try:
-            with sqlite3.connect(self.db_name) as conn:
-                cursor = conn.cursor()
-                query = "SELECT * FROM Product ORDER BY ProductID"
-                cursor.execute(query)
-                rows = cursor.fetchall()
+        query = "SELECT * FROM Product ORDER BY ProductID"
+        products = []
+        rows = self.db_portal.pull_data(query)
+        for row in rows:
+            product = {
+                "ProductID": row[0],
+                "Product_Name": row[1],
+                "Price": row[2],
+                "Total_In_Stock": row[3]
+            }
+            products.append(product)
 
-            products = []
-            for row in rows:
-                product = {
-                    "ProductID": row[0],
-                    "Product_Name": row[1],
-                    "Price": row[2],
-                    "Total_In_Stock": row[3]
-                }
-                products.append(product)
-
-            return products
-        except sqlite3.Error as e:
-            print("SQLite error:", e)
-            return []
+        return products

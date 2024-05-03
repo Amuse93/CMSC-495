@@ -1,7 +1,7 @@
 import secrets
-import sqlite3
 import string
 from passlib.handlers.sha2_crypt import sha256_crypt
+from database_portal import DatabasePortal
 
 
 def generate_random_password():
@@ -23,8 +23,8 @@ def generate_random_password():
 
 class UserManagement:
     # The UserManagement constructor
-    def __init__(self, db_name):
-        self.db_name = db_name
+    def __init__(self):
+        self.db_portal = DatabasePortal()
 
     def add_user(self, user_information):
         """ Adds a User object into the database """
@@ -53,46 +53,28 @@ class UserManagement:
 
         password = generate_random_password()
         hashed_password = sha256_crypt.hash(password)
-        script = [(
-            "INSERT INTO Users VALUES ("
-            f"{user_information[0]},"
-            f"'{user_information[1]}',"
-            f"'{hashed_password}',"
-            f"'{user_information[2]}',"
-            f"'{user_information[3]}',"
-            f"'{user_information[4]}',"
-            f"'{user_information[5]}',"
-            f"'{user_information[6]}',"
-            "1,"
-            "0"
-            ");"
-        )]
-        self.access_db(script)
+
+        script = "INSERT INTO Users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        param = (user_information[0], user_information[1], hashed_password,
+                 user_information[2], user_information[3], user_information[4],
+                 user_information[5], user_information[6], 1, 0)
+        self.db_portal.push_data(script, param)
         return password
 
     def delete_user(self, employee_id):
         """ Deletes a selected User object from the database. """
-        script = [f'DELETE FROM Users WHERE EmployeeID = {employee_id};']
-        self.access_db(script)
+        script = "DELETE FROM Users WHERE EmployeeID = ?;"
+        param = (employee_id,)
+        self.db_portal.push_data(script, param)
         return 0
 
     def get_user_data(self, employee_id):
         """ Provides a selected User's information from the database. """
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
         # Query to select all columns from the Product table, sorted by ProductID
         query = (f"SELECT EmployeeID, Username, First_Name, Last_Name, Phone_Number, Position "
-                 f"FROM Users WHERE EmployeeID = {employee_id};")
-
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the connection
-        conn.close()
+                 f"FROM Users WHERE EmployeeID = ?;")
+        param = (employee_id,)
+        rows = self.db_portal.pull_data(query, param)
 
         user_info = {}
 
@@ -110,9 +92,9 @@ class UserManagement:
 
     def modify_user(self, user_information):
         """ Updates a selected User's information in the database. """
-        username_exists = self.check_if_exists("ProductID", user_information[1])
+        username_exists = self.check_if_exists("Username", user_information[1])
 
-        if (username_exists != 0) or (username_exists != 1):
+        if (username_exists != 0) and (username_exists != 1):
             return 2
 
         if len(user_information[1]) > 60:
@@ -126,43 +108,29 @@ class UserManagement:
         if user_information[5] == '-- Make Selection --':
             return 8
 
-        script = [(f"UPDATE Users SET Username = '{user_information[1]}', "
-                   f"First_Name = '{user_information[2]}', "
-                   f"Last_Name = '{user_information[3]}', "
-                   f"Phone_Number = '{user_information[4]}', "
-                   f"Position = '{user_information[5]}' "
-                   f"WHERE EmployeeID = {user_information[0]};")]
-        self.access_db(script)
+        script = ("UPDATE Users SET Username = ?, First_Name = ?, Last_Name = ?, "
+                  "Phone_Number = ?, Position = ? WHERE EmployeeID = ?;")
+        param = (user_information[1], user_information[2], user_information[3],
+                 user_information[4], user_information[5], user_information[0])
+        self.db_portal.push_data(script, param)
+        return 0
 
     def reset_user_password(self, employee_id):
         """ Replaces a selected User's password with a generated one and resets the 'FirstTime' tick and the
          'Number of Tries' """
         password = generate_random_password()
         hashed_password = sha256_crypt.hash(password)
-        script = [(f"UPDATE Users SET Password = '{hashed_password}', "
-                   f"First_Time = 1, "
-                   f"Number_Of_Tries = 0 "
-                   f"WHERE EmployeeID = {employee_id};")]
-        self.access_db(script)
+        script = "UPDATE Users SET Password = ?, First_Time = 1, Number_Of_Tries = 0 WHERE EmployeeID = ?;"
+        param = (hashed_password, employee_id)
+        self.db_portal.push_data(script, param)
         return password
 
     def list_users(self):
         """ Provides a list of all Users and associated data. """
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
         # Query to select all columns from the Product table, sorted by ProductID
         query = (f"SELECT EmployeeID, Username, First_Name, Last_Name, DOB, Phone_Number, Position "
                  f"FROM Users ORDER BY EmployeeID;")
-
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the connection
-        conn.close()
+        rows = self.db_portal.pull_data(query)
 
         # Convert the fetched rows to a list of dictionaries
         users = []
@@ -182,21 +150,10 @@ class UserManagement:
 
     def search_users(self, field, param):
         """ Provides a list of all Users and associated data filtered by search criteria. """
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
-        # Query to select all columns from the Product table, sorted by ProductID
         query = (f"SELECT EmployeeID, Username, First_Name, Last_Name, DOB, Phone_Number, Position "
-                 f"FROM Users WHERE {field} LIKE '{param}%' ORDER BY EmployeeID;")
-
-        # Execute the query
-        cursor.execute(query)
-
-        # Fetch all rows
-        rows = cursor.fetchall()
-
-        # Close the connection
-        conn.close()
+                 f"FROM Users WHERE {field} LIKE ? ORDER BY EmployeeID;")
+        param = (param + '%',)
+        rows = self.db_portal.pull_data(query, param)
 
         # Convert the fetched rows to a list of dictionaries
         users = []
@@ -215,34 +172,7 @@ class UserManagement:
         return users
 
     def check_if_exists(self, field, param):
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
         query = f"SELECT COUNT(*) FROM Users WHERE {field} = ?"
-
-        # Check if the username exists
-        cursor.execute(query, (param,))
-        user_exists = cursor.fetchone()[0]
-
-        # Close the connection
-        conn.close()
-
+        param = (param,)
+        user_exists = self.db_portal.pull_data(query, param)[0][0]
         return user_exists
-
-    def access_db(self, script):
-        """ Allows scripts to be executed for updating the database """
-        # Connect to the database
-        conn = sqlite3.connect(self.db_name)
-        cursor = conn.cursor()
-
-        for item in script:
-            # Query to select all columns from the Product table, sorted by ProductID
-            query = item
-
-            # Execute the query
-            cursor.execute(query)
-
-        conn.commit()
-
-        # Close the connection
-        conn.close()
