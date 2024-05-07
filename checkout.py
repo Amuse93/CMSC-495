@@ -7,11 +7,15 @@ import smtplib
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
-
 from database_portal import DatabasePortal
 
 
 def generate_receipt_number():
+    """generate_receipt_number()
+
+    Description:
+    Creates a receipt number based on the time the transaction took place.
+    """
     now = datetime.now()
     formatted_datetime = now.strftime('%Y%m%d%H%M%S')
     nanoseconds = now.strftime('%f')
@@ -22,6 +26,16 @@ def generate_receipt_number():
 
 
 def send_email(email, body, filename):
+    """send_email()
+
+    Description:
+    Sends the sales' record via email to the customer with a PDF version attached.
+
+    Parameters:
+    String: email
+    String: body
+    String: filename
+    """
 
     password = "iqsykkuktypwwclx"
     email_sender = "alpha.store.email123@gmail.com"
@@ -49,6 +63,14 @@ def send_email(email, body, filename):
 
 
 def delete_pdf(sale_id):
+    """ delete_pdf()
+
+    Description:
+    Deletes the PDF from the temp directory to prevent the disk from filling up.
+
+    Parameters:
+    String: sale_id
+    """
 
     try:
         os.remove(f"temp/Receipt-{sale_id}.pdf")
@@ -60,6 +82,21 @@ def delete_pdf(sale_id):
 
 
 def generate_pdf_receipt(receipt_number, sales_date, cart_list, total):
+    """generate_pdf_receipt()
+
+    Description:
+    Generates a PDF version of the customer's sale receipt.
+
+    Parameters:
+    String: receipt_number
+    Data: sales_date
+    array/dictionary[]{}: cart_list
+    float: total
+
+    Output:
+    String: filename
+    """
+
     temp_dir = tempfile.gettempdir()
     file_name = f"Receipt-{receipt_number}.pdf"
     file_path = os.path.join(temp_dir, file_name)
@@ -106,9 +143,21 @@ def generate_pdf_receipt(receipt_number, sales_date, cart_list, total):
 class Checkout:
 
     def __init__(self):
+        """Checkout
+
+        Description:
+        Updates the system inventory to account for the products sold, creates PDF and email versions of the
+        sales record or receipt, and emails the receipts to the customer.
+        """
         self.db_portal = DatabasePortal()
 
     def checkout(self, cart_list, total, email, employee_id):
+        """checkout()
+
+        Description:
+        Updates the database subtracting the quantity sold from the quantity of the product on the sales floor shelf
+        and total quantity on hand, and creates a sales record to be stored in the database.
+        """
 
         receipt_number = generate_receipt_number()
         sales_date = datetime.now()

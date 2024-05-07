@@ -1,7 +1,24 @@
 class FormList:
+    """FormList
+
+    Description:
+    Provides a variety of forms to be used with the form_template.html file.
+    """
 
     # Provides HTML for various forms
     def get_inventory_management_form(self, form_type, data):
+        """get_inventory_management_form
+
+        Description:
+        Provides various inventory management forms.
+
+        Parameters:
+        String: form_type
+        array/dictionaries[]{}: data
+
+        Output:
+        String: HTML code
+        """
         if form_type == 'add_shelf':
             add_shelf = (f'<h1>Add Shelf</h1>'
                          f'{data.get("Message")}'
@@ -147,6 +164,18 @@ class FormList:
             return report_waste
 
     def get_product_management_form(self, form_type, data):
+        """get_product_management_form
+
+        Description:
+        Provides various product management forms.
+
+        Parameters:
+        String: form_type
+        array/dictionaries[]{}: data
+
+        Output:
+        String: HTML code
+        """
         if form_type == 'add_product':
             add_product = (f'<h1>Add Product</h1>'
                            f'{data.get("Message")}'
@@ -229,6 +258,18 @@ class FormList:
             return delete_product
 
     def get_user_management_form(self, form_type, data):
+        """get_user_management_form
+
+        Description:
+        Provides various user management forms.
+
+        Parameters:
+        String: form_type
+        array/dictionaries[]{}: data
+
+        Output:
+        String: HTML code
+        """
         if form_type == 'add_user':
             add_user = (f'<h1>Add User</h1>'
                         f'{data.get("Message")}'
@@ -391,6 +432,18 @@ class FormList:
             return reset_user
 
     def get_report_generator_form(self, form_type, data):
+        """get_report_generator_form
+
+        Description:
+        Provides various report generation forms.
+
+        Parameters:
+        String: form_type
+        array/dictionaries[]{}: data
+
+        Output:
+        String: HTML code
+        """
         script = '''
         <script>
             const scopeSelect = document.getElementById("scope");

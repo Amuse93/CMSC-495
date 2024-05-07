@@ -18,6 +18,17 @@ db_name = 'alpha_store.sqlite3'
 
 
 def configure_routes(app):
+    """configure_routes
+
+    Description:
+    Configure all endpoints for the website
+
+    parameter:
+    Flask object
+
+    Output:
+    Flask application object.
+    """
     # Variables
     user_management_system = UserManagement()
     product_management_system = ProductManagement()
@@ -30,6 +41,23 @@ def configure_routes(app):
     # Index (Login) page
     @app.route('/', methods=['GET', 'POST'])
     def index():
+        """index
+
+        Description:
+        Directs user to home if request is GET
+        and Username is not None. If request is
+        Post and username and password are correct,
+        function directs user to home. Otherwise,
+        function directs user to  login page.
+
+        Parameter:
+        none
+
+        Output:
+        string: error
+        url_for("home")
+        login.html
+        """
         if session.get("Username") is not None:
             return redirect(url_for("home"))
 
@@ -55,6 +83,24 @@ def configure_routes(app):
 
     @app.route('/create_password', methods=['GET', 'POST'])
     def create_password():
+        """create_password
+
+        Description:
+        Function is called when user login
+        into the system for the first time.
+        When called, function directs user
+        to "create new password page".
+        If password meets required criteria,
+        function directs user to home page.
+
+        Parameter:
+        none
+
+        Output:
+        url_for('index').
+        url_for('home')
+        create_password.html
+        """
         if session.get('Username') is None:
             return redirect(url_for('index'))
         message = ''
@@ -79,19 +125,63 @@ def configure_routes(app):
 
     @app.route('/logout')
     def logout():
+        """logout
+
+        Description:
+        Function is called when user logs out
+        of the system. When called, function
+        clears user's session and directs
+        user to the login page.
+
+        Parameter:
+        none
+
+        Output:
+        url_for('index').
+        """
         logoff()
         return redirect(url_for('index'))
 
     @app.route('/home')
     def home():
+        """home
+
+        Description:
+        When called, functions directs user
+        to the home screen if Username is
+        not None. Otherwise, function directs
+        user to login page.
+
+        Parameter:
+        none
+
+        output:
+        url_for('index').
+        home.html.
+        """
         if session.get('Username') is None:
             return redirect(url_for('index'))
         return render_template('home.html', username=session.get('Username'), role=session.get('Position'))
 
-    #######################################################################
     # Checkout Section
     @app.route('/checkout', methods=['GET', 'POST'])
     def checkout():
+        """checkout
+
+        Description:
+        When called, function directs user
+        to the checkout-page if user's
+        role-attribute meet the acceptable
+        requirements. Otherwise, user is
+        redirected to the home-page.
+
+        Parameter:
+        none
+
+        Output:
+        checkout.html
+        url_for('home').
+        """
         if ((session.get('Position') != 'Cashier') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -103,6 +193,25 @@ def configure_routes(app):
 
     @app.route('/finalize_checkout', methods=['POST'])
     def finalize_checkout():
+        """finalize_checkout
+
+        Description:
+        When called, function retrieve sales data
+        from user input, and uses that data to
+        update the database, and email a copy of
+        the receipt to the customer. The function
+        also renders a form-template that displays the
+        sales receipt allows the user to select "ok"
+        Selecting "ok" will prompt the function to
+        redirect user to url_for('checkout')
+
+        Parameters:
+        none
+
+        Output:
+        form_template.html
+        url_for('checkout')
+        """
         title = 'Finalize Checkout'
         data = request.json
         cart_list = data.get('orderData')
@@ -124,6 +233,21 @@ def configure_routes(app):
     # Inventory Management Section
     @app.route('/inventory_management/', methods=['GET', 'POST'])
     def inventory_management():
+        """inventory_management
+
+        Description:
+        When called, function directs user
+        to inventory_management page if user's
+        role-attribute meets acceptable requirements.
+        Otherwise, user is redirected to the home page
+
+        Parameters:
+        none
+
+        Output:
+        inventory_management.html
+        url_for('home')
+        """
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -144,6 +268,20 @@ def configure_routes(app):
 
     @app.route('/inventory_management/shelf_view', methods=['GET', 'POST'])
     def inventory_management_shelf_view():
+        """inventory_management_shelf_view
+
+        Description:
+        When called, function displays all shelves
+        and their content to user. Function also allow
+        user to filter which shelf to display.
+
+        Parameter:
+        none
+
+        Output:
+        dictionary: shelves
+        inventory_management_template_shelf_view.html
+        """
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -164,6 +302,21 @@ def configure_routes(app):
 
     @app.route('/inventory_management/shelf/<shelf_id>', methods=['GET', 'POST'])
     def inventory_management_shelf(shelf_id):
+        """inventory_management_shelf
+
+        Description:
+        When called, function uses the
+        shelf_id provided by user to search
+        and display the content of the shelf
+        with the provided shelf_id.
+
+        Parameters:
+        shelf_id
+
+        Output:
+        dictionary: shelf
+        inventory_management_shelf_template.html
+        """
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -184,6 +337,22 @@ def configure_routes(app):
 
     @app.route('/add_shelf', methods=['GET', 'POST'])
     def add_shelf():
+
+        """add_shelf
+
+        Description:
+        When called, function checks session
+        role-attribute for accessibility. If role
+        is allowed access, function renders
+        the form_template to allow for user to add
+        shelves to the database.
+
+        Parameter:
+        none
+
+        output:
+        form_template.html."""
+
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Add Shelf'
@@ -222,6 +391,21 @@ def configure_routes(app):
 
     @app.route('/delete_shelf/<shelf_id>', methods=['GET', 'POST'])
     def delete_shelf(shelf_id):
+        """delete_shelf
+
+        Description:
+        When called, function checks session
+        role-attribute for accessibility. If role
+        is allowed access, function renders
+        the form_template to allow for user to
+        delete shelves from database.
+
+        Parameter:
+        shelf_id
+
+        output:
+        form_template.html."""
+
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Delete Shelf'
@@ -259,6 +443,21 @@ def configure_routes(app):
 
     @app.route('/add_product_to_shelf', methods=['GET', 'POST'])
     def add_product_to_shelf():
+        """add_product_to_shelf
+
+        Description:
+        When called, function checks session
+        role-attribute for accessibility. If role
+        is allowed access, function renders
+        the form_template to allow for user to add
+        product to shelves in the database.
+
+        Parameter:
+        none
+
+        output:
+        form_template.html."""
+
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Add Product'
@@ -301,6 +500,22 @@ def configure_routes(app):
 
     @app.route('/delete_product_from_shelf/<product_id>&<shelf_id>', methods=['GET', 'POST'])
     def delete_product_from_shelf(product_id, shelf_id):
+        """delete_product_from_shelf
+
+        Description:
+        When called, function checks session
+        role-attribute for accessibility. If role
+        is allowed access, function renders
+        the form_template to allow for user to
+        delete product from shelves in the database.
+
+        Parameter:
+        product_id
+        shelf_id
+
+        output:
+        form_template.html."""
+
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Delete Product From Shelf'
@@ -332,6 +547,23 @@ def configure_routes(app):
 
     @app.route('/receive_order', methods=['GET', 'POST'])
     def receive_order():
+        """receive_order
+
+        Description:
+        When called, function checks
+        user role-attribute for accessibility.
+        If user is allowed access, function
+        directs user to the receive_order
+        page. Otherwise, user is directed
+        to the home page
+
+        Parameter:
+        none
+
+        Output:
+        receive_order.html
+        url_for('home')
+        """
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -343,6 +575,20 @@ def configure_routes(app):
 
     @app.route('/submit_received_order', methods=['POST'])
     def submit_order():
+        """submit_order
+
+        Description:
+        When called, function parses received
+        order from the front-end to the back-end,
+        and renders the form_template to display
+        the outcome of the transfer process.
+
+        Parameter:
+        none
+
+        Output:
+        form_template.html
+        """
         title = 'Receive Order'
         order_data = request.json
 
@@ -350,7 +596,6 @@ def configure_routes(app):
         inventory_management_system.receive_order(order_data)
 
         if request.method == 'POST':
-
             code = (f'<h1>Receive Order</h1><br>'
                     f'<h3>The order was received successfully.</h3><br>'
                     f'<a href="{url_for("inventory_management")}">'
@@ -362,6 +607,22 @@ def configure_routes(app):
 
     @app.route('/move_product/<product_id>&<shelf_id>', methods=['GET', 'POST'])
     def move_product(product_id, shelf_id):
+        """move_product
+
+        Description:
+        When called, function render the form
+        template to allow user to move products
+        between shelves in a warehouse or between
+        shelves on the sales floor.
+
+        Parameter:
+        product_id
+        shelf_id
+
+        Output:
+        int: error
+        form_template.html
+        """
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -413,6 +674,19 @@ def configure_routes(app):
 
     @app.route('/stock_product/<product_id>', methods=['GET', 'POST'])
     def stock_product(product_id):
+        """stock_product
+
+        Description:
+        When called, function renders form template
+        to allow user to add received products
+        to inventory.
+
+        Parameter:
+        product_id
+
+        Output:
+        form_template
+        """
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -441,6 +715,20 @@ def configure_routes(app):
 
     @app.route('/report_waste/<product_id>&<shelf_id>', methods=['GET', 'POST'])
     def report_waste(product_id, shelf_id):
+        """report_waste
+
+        Description:
+        When called, function renders
+        the form_template to allow
+        user to report damage products.
+
+        Parameter:
+        product_id
+        shelf_id
+
+        Output:
+        form_template."""
+
         if ((session.get('Position') != 'Warehouseman') and (session.get('Position') != 'Cashier/Warehouseman')
                 and (session.get('Position') != 'Manager')):
             return redirect(url_for('home'))
@@ -476,6 +764,21 @@ def configure_routes(app):
     # Product Management Section
     @app.route('/product_management', methods=['GET', 'POST'])
     def product_management():
+        """product_management
+
+        Description:
+        When called, if user role-attribute
+        is not manager, function redirects
+        user to the home page. If user role
+        is manager, function directs user to
+        the product_management page.
+
+        Parameter:
+        none
+
+        Output:
+        product_management_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Product Management'
@@ -495,6 +798,18 @@ def configure_routes(app):
 
     @app.route('/add_product', methods=['GET', 'POST'])
     def add_product():
+        """add_product
+
+        Description:
+        When called, function renders the form_template
+        to allow user to add a new product to inventory.
+
+        Parameters:
+        none
+
+        Output:
+        form_template.html.
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Add Product'
@@ -542,6 +857,19 @@ def configure_routes(app):
 
     @app.route('/modify_product/<product_id>', methods=['GET', 'POST'])
     def modify_product(product_id):
+        """modify_product
+
+        Description:
+        When called, function renders the form_template
+        to allow user to modify any attribute of an
+        existing product.
+
+        Parameter:
+        product_id
+
+        Output:
+        form_template.
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Modify Product'
@@ -583,6 +911,18 @@ def configure_routes(app):
 
     @app.route('/delete_product/<product_id>', methods=['GET', 'POST'])
     def delete_product(product_id):
+        """delete_product
+
+        Description:
+        When called, function renders the form_template
+        to allow user to delete product from inventory.
+
+        Parameter:
+        none
+
+        Output:
+        form_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Delete Product'
@@ -619,6 +959,21 @@ def configure_routes(app):
     # User Management Section
     @app.route('/user_management', methods=['GET', 'POST'])
     def user_management():
+        """user_management
+
+        Description:
+        When called, if user role is not manager,
+        user is redirected to url_for('home').
+        Otherwise, user is directed to the
+        user_management page.
+
+        Parameter:
+        none
+
+        Output:
+        url_for('home')
+        user_management_template.html.
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
 
@@ -639,6 +994,21 @@ def configure_routes(app):
 
     @app.route('/add_user', methods=['GET', 'POST'])
     def add_user():
+        """add_user
+
+        Description:
+        When called, if user is not manager, user is
+        redirected to url_for('home'). Otherwise, function
+        renders the form_template to allow user to
+        add new users to the database.
+
+        Parameter:
+        none
+
+        Output:
+        url_for('home')
+        form_template.
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Add User'
@@ -700,6 +1070,21 @@ def configure_routes(app):
 
     @app.route('/modify_user/<int:employee_id>', methods=['GET', 'POST'])
     def modify_user(employee_id):
+        """modify_user
+
+        Description:
+        When called, if user is not manager, user
+        is redirected to url_for('home'). Otherwise,
+        function renders the form_template to allow
+        user to modify existing user attributes.
+
+        Parameters:
+        employee_id
+
+        Output:
+        url_for('home')
+        form_template
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Modify User'
@@ -746,6 +1131,21 @@ def configure_routes(app):
 
     @app.route('/delete_user/<int:employee_id>', methods=['GET', 'POST'])
     def delete_user(employee_id):
+        """delete_user
+
+        Description:
+        When called, if user is not manager, user
+        is redirected to url_for('home'). Otherwise,
+        function renders the form_template to allow
+        user to delete existing user from database.
+
+        Parameters:
+        employee_id
+
+        Output:
+        url_for('home')
+        form_template
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Delete User'
@@ -771,6 +1171,22 @@ def configure_routes(app):
 
     @app.route('/reset_user/<int:employee_id>', methods=['GET', 'POST'])
     def reset_user(employee_id):
+        """reset_user
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function renders the form_template
+        to allow for user to reset user's account( in
+        case of a lock out)
+
+        Parameters:
+        employee_id
+
+        Output:
+        url_for('home')
+        form_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Reset User Password'
@@ -797,6 +1213,22 @@ def configure_routes(app):
     # Report Generation Section
     @app.route('/report_generation')
     def report_generation():
+        """report_generation
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function renders the form_template
+        to allow for user to generate different
+        types of data reports.
+
+        Parameters:
+        none
+
+        Output:
+        url_for('home')
+        form_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Report Generation'
@@ -812,6 +1244,22 @@ def configure_routes(app):
 
     @app.route('/report_generation/inventory_report')
     def inventory_report():
+        """inventory_report
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function renders the form_template
+        to allow for user to generate inventory
+        related reports.
+
+        Parameters:
+        none
+
+        Output:
+        url_for('home')
+        form_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Inventory Report'
@@ -824,6 +1272,24 @@ def configure_routes(app):
 
     @app.route('/report_generation/inventory_report/total_inventory')
     def total_inventory_report():
+        """total_inventory_report
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function generates and
+        display a report of all products and their
+         total quantity in the database
+        in a pdf file.
+
+        Parameters:
+        none
+
+        Output:
+        url_for('home')
+        url_for('report_generation')
+        File: pdf
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
 
@@ -835,6 +1301,25 @@ def configure_routes(app):
 
     @app.route('/report_generation/inventory_report/shelf_inventory')
     def shelf_inventory_report():
+        """shelf_inventory_report
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function generates and
+        display a report of all products
+        in each shelf in the database
+        in a pdf file.
+
+        Parameters:
+        none
+
+        Output:
+        url_for('home')
+        url_for('report_generation')
+        File: pdf
+        """
+
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
 
@@ -846,6 +1331,22 @@ def configure_routes(app):
 
     @app.route('/report_generation/sales_report', methods=['GET', 'POST'])
     def sales_report():
+        """sales_report
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function renders the form
+        template to allow user to enter the values
+        needed for the generation of a sales report.
+
+        Parameters:
+        none
+
+        Output:
+        url_for('home')
+        form_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Sales Report'
@@ -883,6 +1384,22 @@ def configure_routes(app):
 
     @app.route('/report_generation/waste_report', methods=['GET', 'POST'])
     def waste_report():
+        """sales_report
+
+        Description:
+        When called, if user is not manager,
+        user is redirected to url_for('home').
+        Otherwise, function renders the form
+        template to allow user to enter the values
+        needed for the generation of a waste report.
+
+        Parameters:
+        none
+
+        Output:
+        url_for('home')
+        form_template.html
+        """
         if session.get('Position') != 'Manager':
             return redirect(url_for('home'))
         title = 'Waste Report'
@@ -922,6 +1439,18 @@ def configure_routes(app):
 
 # Set up the Flask app
 def create_app():
+    """create_app
+
+    Description:
+    When called, function sets up and configure
+    the Flask application instance.
+
+    Parameters:
+    none
+
+    Output:
+    object: flask app.
+    """
     flask_app = Flask(__name__)
     flask_app.secret_key = secrets.token_hex(24)
     flask_app.static_folder = 'static'
@@ -937,6 +1466,26 @@ def create_app():
 
 # Allows the user to login
 def login(username, password):
+    """login
+
+    Description:
+    Function is used to verify user
+    credentials during login. If user number
+    of login trials are within an acceptable
+    value and  user credentials are validated,
+    user session object is created and number
+    of login trials is adjusted to zero.
+    Otherwise, function return an
+    error code, and increment the
+    number of login trials.
+
+    Parameter:
+    username
+    password
+
+    Output:
+    int: error code
+    """
     # Constant
     param = (username,)
 
@@ -989,6 +1538,26 @@ def login(username, password):
 
 # Change password
 def create_password_function(employee_id, password1, password2):
+    """create_password_function
+
+    Description:
+    Function is called when user create
+    a new password and click submit. Function
+    verifies if password meets complexity,
+    minimum length, and ensures that both passwords
+    match. If new password meets all criteria, user
+    password is updated in the database, and user
+    number of trials is set to zero.
+
+    Parameter:
+    employee_id
+    password1(current password)
+    password2(new password)
+
+    Output:
+    int: error code
+    user password update
+    """
     # Check if password1 meets complexity requirements
     flag = 0
     if len(password1) < 8:
@@ -1024,6 +1593,16 @@ def create_password_function(employee_id, password1, password2):
 
 # Logs off the user by clearing the session data
 def logoff():
+    """logoff
+
+    Description:
+    Clears user session
+
+    Parameter:
+    none
+
+    Output:
+    clears user session"""
     session.clear()
 
 

@@ -9,7 +9,17 @@ class ProductManagement:
         self.product_cache = ProductCache()
 
     def add_product(self, product_information):
-        """ Adds a Product object into the database """
+        """add_product
+
+        Description:
+        Adds a Product object into the database
+
+        Parameters:
+        array: product_information
+
+        Output:
+        int: error code
+        """
         product_exists = self.check_if_exists("ProductID", product_information[0])
 
         if product_exists != 0:
@@ -39,7 +49,17 @@ class ProductManagement:
         return 0
 
     def delete_product(self, product_id):
-        """ Deletes a selected Product object from the database. """
+        """delete_product
+
+        Description:
+        Deletes a selected Product object from the database.
+
+        Parameters:
+        string: product_id
+
+        Output:
+        int: error code
+        """
         param = (product_id,)
         product_exists = self.check_if_exists("ProductID", product_id)
 
@@ -58,7 +78,17 @@ class ProductManagement:
         return 0
 
     def get_product_data(self, product_id):
-        """ Provides a selected Product's information from the database. """
+        """get_product_data
+
+        Description:
+        Provides a selected Product's information from the database.
+
+        Parameters:
+        string: product_id
+
+        Output:
+        dict: product_info
+        """
         query = f"SELECT * FROM Product WHERE ProductID = ?;"
         param = (product_id,)
         rows = self.db_portal.pull_data(query, param)
@@ -75,7 +105,17 @@ class ProductManagement:
         return product_info
 
     def modify_product(self, product_information):
-        """ Updates a selected Product's information in the database. """
+        """modify_product
+
+        Description:
+        Updates a selected Product's information in the database.
+
+        Parameters:
+        array: product_information
+
+        Output:
+        int: error code
+        """
         product_name_exists = self.check_if_exists("Product_Name", product_information[1])
 
         if (product_name_exists != 0) and (product_name_exists != 1):
@@ -97,13 +137,34 @@ class ProductManagement:
         return 0
 
     def list_products(self):
-        """ Provides a list of all Users and associated data. """
+        """list_products
+
+        Description:
+        Provides a list of all Users and associated data.
+
+        Parameters:
+        None
+
+        Output:
+        dict: product_data
+        """
         product_data = self.product_cache.get_product_data()
 
         return product_data
 
     def search_products(self, field, param):
-        """ Provides a list of all Users and associated data filtered by search criteria. """
+        """search_products
+
+        Description:
+        Provides a list of all Users and associated data filtered by search criteria.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        array: products
+        """
         query = (f"SELECT ProductID, Product_Name, Price, Total_In_Stock "
                  f"FROM Product WHERE {field} LIKE ? ORDER BY ProductID;")
         param = (param + '%',)
@@ -123,6 +184,19 @@ class ProductManagement:
         return products
 
     def check_if_exists(self, field, param):
+        """check_if_exists
+
+        Description:
+        Checks if the paramter exists in the associated field.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        boolean: user_exists
+        """
+
         query = f"SELECT COUNT(*) FROM Product WHERE {field} = ?"
         product_exists = self.db_portal.pull_data(query, (param,))[0][0]
         return product_exists

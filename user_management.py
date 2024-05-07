@@ -5,8 +5,18 @@ from database_portal import DatabasePortal
 
 
 def generate_random_password():
-    """ Generates a random password with at least one lowercase letter, one uppercase letter, one digit,
-    and one punctuation character. The default length of the password is 8 characters. """
+    """generate_random_password
+
+    Description:
+    Generates a random password with at least one lowercase letter, one uppercase letter, one digit,
+    and one punctuation character. The default length of the password is 8 characters.
+
+    Parameters:
+    None
+
+    Output:
+    string: A secure password
+    """
     alphabet = ""
     alphabet += string.ascii_lowercase
     alphabet += string.ascii_uppercase
@@ -27,7 +37,18 @@ class UserManagement:
         self.db_portal = DatabasePortal()
 
     def add_user(self, user_information):
-        """ Adds a User object into the database """
+        """add_user
+
+        Description:
+        Adds a User object into the database
+
+        Parameters:
+        array: user_information
+
+        Output:
+        int: error code
+        string: password
+        """
         user_exists = self.check_if_exists("EmployeeID", user_information[0])
 
         if user_exists != 0:
@@ -62,14 +83,34 @@ class UserManagement:
         return password
 
     def delete_user(self, employee_id):
-        """ Deletes a selected User object from the database. """
+        """delete_user
+
+        Description:
+        Deletes a selected User object from the database.
+
+        Parameters:
+        string: employee_id
+
+        Output:
+        int: error code
+        """
         script = "DELETE FROM Users WHERE EmployeeID = ?;"
         param = (employee_id,)
         self.db_portal.push_data(script, param)
         return 0
 
     def get_user_data(self, employee_id):
-        """ Provides a selected User's information from the database. """
+        """get_user_data
+
+        Description:
+        Provides a selected User's information from the database.
+
+        Parameters:
+        string: employee_id
+
+        Output:
+        dictionary: user_information
+        """
         # Query to select all columns from the Product table, sorted by ProductID
         query = (f"SELECT EmployeeID, Username, First_Name, Last_Name, Phone_Number, Position "
                  f"FROM Users WHERE EmployeeID = ?;")
@@ -91,7 +132,17 @@ class UserManagement:
         return user_info
 
     def modify_user(self, user_information):
-        """ Updates a selected User's information in the database. """
+        """modify_user
+
+        Description:
+        Updates a selected User's information in the database.
+
+        Parameters:
+        array: user_information
+
+        Output:
+        int: error code
+        """
         username_exists = self.check_if_exists("Username", user_information[1])
 
         if (username_exists != 0) and (username_exists != 1):
@@ -116,8 +167,18 @@ class UserManagement:
         return 0
 
     def reset_user_password(self, employee_id):
-        """ Replaces a selected User's password with a generated one and resets the 'FirstTime' tick and the
-         'Number of Tries' """
+        """reset_user_password
+
+        Description:
+        Replaces a selected User's password with a generated one and resets the 'FirstTime' tick and the
+         'Number of Tries'
+
+        Parameters:
+        string: employee_id
+
+        Output:
+        string: password
+         """
         password = generate_random_password()
         hashed_password = sha256_crypt.hash(password)
         script = "UPDATE Users SET Password = ?, First_Time = 1, Number_Of_Tries = 0 WHERE EmployeeID = ?;"
@@ -126,7 +187,17 @@ class UserManagement:
         return password
 
     def list_users(self):
-        """ Provides a list of all Users and associated data. """
+        """list_users
+
+        Description:
+        Provides a list of all Users and associated data.
+
+        Parameters:
+        None
+
+        Output:
+        array: users
+        """
         # Query to select all columns from the Product table, sorted by ProductID
         query = (f"SELECT EmployeeID, Username, First_Name, Last_Name, DOB, Phone_Number, Position "
                  f"FROM Users ORDER BY EmployeeID;")
@@ -149,7 +220,18 @@ class UserManagement:
         return users
 
     def search_users(self, field, param):
-        """ Provides a list of all Users and associated data filtered by search criteria. """
+        """search_users
+
+        Description:
+        Provides a list of all Users and associated data filtered by search criteria.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        array: users
+        """
         query = (f"SELECT EmployeeID, Username, First_Name, Last_Name, DOB, Phone_Number, Position "
                  f"FROM Users WHERE {field} LIKE ? ORDER BY EmployeeID;")
         param = (param + '%',)
@@ -172,6 +254,18 @@ class UserManagement:
         return users
 
     def check_if_exists(self, field, param):
+        """check_if_exists
+
+        Description:
+        Checks if the paramter exists in the associated field.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        boolean: user_exists
+        """
         query = f"SELECT COUNT(*) FROM Users WHERE {field} = ?"
         param = (param,)
         user_exists = self.db_portal.pull_data(query, param)[0][0]

@@ -4,6 +4,17 @@ from inventory_cache import InventoryCache
 
 
 def get_report_number():
+    """get_report_number
+
+    Description:
+    Generates a unique report number for official reports
+
+    Parameters:
+    None
+
+    Output:
+    string: result
+    """
     now = datetime.now()
     formatted_datetime = now.strftime('%Y%m%d%H%M%S')
     nanoseconds = now.strftime('%f')
@@ -54,7 +65,17 @@ class InventoryManagement:
         return 0
 
     def delete_shelf(self, shelf_id):
-        """This function will delete a shelf from the inventory"""
+        """delete_shelf
+
+        Description:
+        This function will delete a shelf from the inventory
+
+        Parameters:
+        string: shelf_id
+
+        Output:
+        int: error_code
+        """
 
         shelf_exists = self.check_if_exists('Shelf', 'ShelfID', shelf_id)
 
@@ -81,8 +102,17 @@ class InventoryManagement:
         return 0
 
     def add_product_to_shelf(self, shelf_product_info):
+        """add_product_to_shelf
 
-        """This function will add a new product to a shelf"""
+        Description:
+        This function will add a new product to a shelf
+
+        Parameters:
+        array: shelf_product_info
+
+        Output:
+        int: error code
+        """
         shelf_id = shelf_product_info[0]
         product_id = shelf_product_info[1]
 
@@ -117,7 +147,18 @@ class InventoryManagement:
         return 0
 
     def delete_product_from_shelf(self, product_id, shelf_id):
-        """This function will add a new product to a shelf"""
+        """delete_product_from_shelf
+
+        Description:
+        This function will add a new product to a shelf
+
+        Parameters:
+        string: product_id
+        string: shelf_id
+
+        Output:
+        int: error code
+        """
         param = (product_id, shelf_id)
 
         query = f"SELECT Quantity FROM Shelf_Product WHERE ProductID = ? AND ShelfID = ?;"
@@ -135,7 +176,17 @@ class InventoryManagement:
         return 0
 
     def move_product(self, shelf_product_info):
-        """This function moves a product from one shelf to another"""
+        """move_product
+
+        Description:
+        This function moves a product from one shelf to another
+
+        Parameters:
+        array: shelf_product_info
+
+        Output:
+        int: error code
+        """
         product_id = shelf_product_info[0]
         from_shelf = shelf_product_info[1]
         to_shelf = shelf_product_info[2]
@@ -177,10 +228,17 @@ class InventoryManagement:
         return 0
 
     def receive_order(self, order_info):
-        """This function will manage the inventory when a sale is made.
-        When a sale is made, the quantity in the warehouse will reduce to simulate the
-        automatic movement of product from the warehouse to the shelf after every transaction.
-        A dictionary containing ProductID:quantity as the key/value pair will be passed to the function"""
+        """receive_order
+
+        Description:
+        This function will manage the inventory when a shipment arrives
+
+        Parameters:
+        dict: order_info
+
+        Output:
+        int: error code
+        """
 
         for element in order_info:
             product_id = element.get('ProductID')
@@ -201,7 +259,17 @@ class InventoryManagement:
         return 0
 
     def stock_product(self, stock_info):
-        """This function adds more items to the inventory of a particular product"""
+        """stock_product
+
+        Description:
+        This function adds more items to the inventory of a particular product
+
+        Parameters:
+        array: stock_info
+
+        Output:
+        int: error code
+        """
         product_id = stock_info[0]
         quantity = stock_info[1]
 
@@ -223,7 +291,17 @@ class InventoryManagement:
         return 0
 
     def report_waste(self, waste_info):
-        """ Produces a waste report and updates inventory and product information """
+        """report_waste
+
+         Description:
+         Produces a waste report and updates inventory and product information
+
+        Parameters:
+        array: waste_info
+
+        Output:
+        int: error_code
+        """
         report_number = get_report_number()
         product_id = waste_info[0]
         shelf_id = waste_info[1]
@@ -267,13 +345,33 @@ class InventoryManagement:
         return 0
 
     def list_shelves(self):
-        """ Provides a list of available shelving units """
+        """list_shelves
+
+         Description:
+         Provides a list of available shelving units
+
+        Parameters:
+        None
+
+        Output:
+        dict: shelves
+        """
         # Pull shelf list from inventory cache
         shelves = self.inventory_cache.get_shelf_data()
         return shelves
 
     def search_shelves(self, param):
-        """ Provides a list of shelves filtered by search criteria. """
+        """search_shelves
+
+         Description:
+         Provides a list of shelves filtered by search criteria.
+
+        Parameters:
+        string: param
+
+        Output:
+        array: shelves
+        """
         # Query to select all columns from the Product table, sorted by ProductID
         query = "SELECT * FROM Shelf WHERE ShelfID LIKE ? ORDER BY ShelfID;"
         param = (param + '%',)
@@ -290,14 +388,35 @@ class InventoryManagement:
         return shelves
 
     def list_shelf_products(self):
-        """ Provides a list of products along with their quantity and shelf location """
+        """list_shelf_products
+
+        Description:
+        Provides a list of products along with their quantity and shelf location
+
+        Parameters:
+        None
+
+        Output:
+        array: shelf_products
+        """
         # Pull inventory list from inventory cache
         shelf_products = self.inventory_cache.get_inventory_data()
 
         return shelf_products
 
     def search_shelf_products(self, field, param):
-        """ Provides a list of products along with their quantity and shelf locations filtered by search criteria. """
+        """search_shelf_products
+
+        Description:
+        Provides a list of products along with their quantity and shelf locations filtered by search criteria.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        array: shelf_products
+        """
 
         # Query to select ProductID, Product_Name, Quantity, and ShelfID from Shelf_Product table
         # Joined with Product table to get the Product_Name
@@ -332,7 +451,19 @@ class InventoryManagement:
         return shelf_products
 
     def search_shelf_products_by_shelf(self, field, param, shelf_id):
-        """ Provides a list of products along with their quantity and shelf locations filtered by search criteria. """
+        """search_shelf_products_by_shelf
+
+        Description:
+        Provides a list of products along with their quantity and shelf locations filtered by search criteria.
+
+        Parameters:
+        string: field
+        string: param
+        string: shelf_id
+
+        Output:
+        array: shelf_products
+        """
         # Query to select ProductID, Product_Name, Quantity, and ShelfID from Shelf_Product table
         # Joined with Product table to get the Product_Name
         if field == 'Product_Name':
@@ -368,7 +499,17 @@ class InventoryManagement:
         return shelf_products
 
     def get_product_data(self, product_id):
-        """ Provides a list of products along with their quantity and shelf locations filtered by search criteria. """
+        """get_product_data
+
+        Description:
+        Provides a list of products along with their quantity and shelf locations filtered by search criteria.
+
+        Parameters:
+        string: product_id
+
+        Output:
+        array: shelf_products
+        """
         # Query to select ProductID, Product_Name, Quantity, and ShelfID from Shelf_Product table
         # Joined with Product table to get the Product_Name
         query = (
@@ -393,6 +534,19 @@ class InventoryManagement:
         return shelf_products
 
     def check_if_exists(self, table, field, param):
+        """check_if_exists
+
+        Description:
+        Checks if the paramter exists in the associated field.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        boolean: user_exists
+        """
+
         query = f"SELECT COUNT(*) FROM {table} WHERE {field} = ?;"
         param = (param,)
         shelf_exists = self.db_portal.pull_data(query, param)

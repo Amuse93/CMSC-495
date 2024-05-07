@@ -17,6 +17,17 @@ plt.switch_backend('agg')
 
 
 def generate_filename():
+    """generate_filename
+
+    Description:
+    Generates a unique filename
+
+    Parameters:
+    None
+
+    Output:
+    string: result
+    """
     now = datetime.now()
     formatted_datetime = now.strftime('%Y%m%d%H%M%S')
     nanoseconds = now.strftime('%f')
@@ -32,9 +43,17 @@ class ReportGenerator:
         self.db_portal = DatabasePortal()
 
     def generate_report(self, report_info):
-        """ Generate a report. Accepts a dictionary with the following
-        parameters: Report_Type, Reason, Scope, Metric, Period, From_Date,
-        and To_Date"""
+        """generate_report
+
+        Description:
+        Generate a report. Accepts a dictionary with the following
+
+        Parameters:
+        dict: report_info
+
+        Output:
+        int: error code
+        """
         report_type = report_info.get('Report_Type')
 
         if report_type == 'Sales':
@@ -50,6 +69,17 @@ class ReportGenerator:
             return 2
 
     def sales_report(self, report_info):
+        """sales_reports
+
+        Description:
+        Generate a sales report based on a specified time period
+
+        Parameters:
+        dict: report_info
+
+        Output:
+        int: error code
+        """
 
         period = report_info.get('Period')
 
@@ -126,6 +156,17 @@ class ReportGenerator:
         return 0
 
     def inventory_report(self, report_info):
+        """inventory_report
+
+        Description:
+        Generates an inventory report based on a specified scope
+
+        Parameters:
+        dict: report_info
+
+        Output:
+        int: error code"""
+
         data = {}
 
         if report_info.get('Scope') == 'Total_Inventory':
@@ -181,7 +222,17 @@ class ReportGenerator:
         return 0
 
     def waste_report(self, report_info):
+        """waste_report
 
+        Description:
+        Generates a report of wasted product based on a specified time period
+
+        Parameters:
+        dict: report_info
+
+        Output:
+        int: error code
+        """
         period = report_info.get('Period')
 
         # Define the SQL query based on the selected time interval
@@ -259,6 +310,19 @@ class ReportGenerator:
         return 0
 
     def generate_pdf_report(self, rows, report_info):
+        """generate_prf_report
+
+        Description:
+        Generates a pdf report based on the selected report type
+
+        Parameters:
+        int: rows
+        dict: report_info
+
+        Output:
+        string: filename
+        """
+
         report_title_text = ''
         report_title_text2 = ''
 
@@ -444,6 +508,19 @@ class ReportGenerator:
         return filename
 
     def check_product_exists(self, product_id):
+        """check_product_exists
+
+        Description:
+        Checks if the paramter exists in the associated field.
+
+        Parameters:
+        string: field
+        string: param
+
+        Output:
+        boolean: user_exists
+        """
+
         query = "SELECT COUNT(*) FROM Product WHERE ProductID = ?"
         param = (product_id,)
         product_exists = self.db_portal.pull_data(query, param)[0][0]
